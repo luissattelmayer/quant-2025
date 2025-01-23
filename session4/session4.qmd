@@ -1,14 +1,18 @@
 # Diff-in-Diff
+
+```{=html}
 <style>body {text-align: justify}</style>
+```
 
 ## Introduction
-This week we will start talking about Causal Inference in R. You will have already seen the theoretical and mathematical parts with Brenda in the lecture. This script is supposed to initiate you to the practical part of Causal Inference. 
 
-This session will show you how to : 
+This week we will start talking about Causal Inference in R. You will have already seen the theoretical and mathematical parts with Brenda in the lecture. This script is supposed to initiate you to the practical part of Causal Inference.
 
-1. Prepare data for Causal Inference
-2. Perform a simple Diff-in-Diff analysis in R
-3. Interpret the results of a Diff-in-Diff analysis in R
+This session will show you how to :
+
+1.  Prepare data for Causal Inference
+2.  Perform a simple Diff-in-Diff analysis in R
+3.  Interpret the results of a Diff-in-Diff analysis in R
 
 ```{r}
 #| messages: false
@@ -21,35 +25,31 @@ library(scales)
 library(tidyverse)
 ```
 
-
-
-
-
 ## Diff-in-Diff
-For the first example on Diff-in-Diff I am going to use the code written by the brilliant [Rohan Alexander](https://rohanalexander.com/) who has written one of the (if not *the*) best introduction to Data Analysis in R which you can find [here](https://tellingstorieswithdata.com/). Furthermore, the example he uses is a paper written by [Charles Angelucci](https://sites.google.com/site/charlesangelucci/) and [Julia Cagé](https://juliacage.com/fr/) who you probably know already. 
+
+For the first example on Diff-in-Diff I am going to use the code written by the brilliant [Rohan Alexander](https://rohanalexander.com/) who has written one of the (if not *the*) best introduction to Data Analysis in R which you can find [here](https://tellingstorieswithdata.com/). Furthermore, the example he uses is a paper written by [Charles Angelucci](https://sites.google.com/site/charlesangelucci/) and [Julia Cagé](https://juliacage.com/fr/) who you probably know already.
 
 The paper is called "Newspapers in Times of Low Advertising Revenues" [@angelucci_newspapers_2019] and follows a difference-in-difference analysis and it also comes with replication material which means that we can try to emulate their results.
 
-In 1967, the French government introduced advertisements on French TV programs. This led to a decrease in advertising revenues for newspapers all over France. The idea is therefore to understand if and how the introduction of ads on TV affected the ad revenues for newspapers, both local and national ones, in France. They use a difference-in-difference approach to estimate the effect of the introduction of advertising on the advertising revenues of newspapers. Thus, the treatment is...? Exactly, the introduction of ads on TV. Angelucci and Cagé argue that national newspapers were more affected by this change than local newspapers. They have many more hypotheses which they test in this paper, but for now we will focus on this one. As mentioned above, their [data is available](https://www.openicpsr.org/openicpsr/project/116438/version/V1/view) and we can use it to replicate their results. You need to sign up, to get it. 
+In 1967, the French government introduced advertisements on French TV programs. This led to a decrease in advertising revenues for newspapers all over France. The idea is therefore to understand if and how the introduction of ads on TV affected the ad revenues for newspapers, both local and national ones, in France. They use a difference-in-difference approach to estimate the effect of the introduction of advertising on the advertising revenues of newspapers. Thus, the treatment is...? Exactly, the introduction of ads on TV. Angelucci and Cagé argue that national newspapers were more affected by this change than local newspapers. They have many more hypotheses which they test in this paper, but for now we will focus on this one. As mentioned above, their [data is available](https://www.openicpsr.org/openicpsr/project/116438/version/V1/view) and we can use it to replicate their results. You need to sign up, to get it.
 
 ```{r}
 newspapers <- read_dta("data/Angelucci_Cage_AEJMicro_dataset.dta")
 ```
 
-
 Next we will have to do some minor data management. Fortunately enough, this replication material is already pretty clean and we do not have to `mutate()` or `filter()` our way around too much. The only thing we actually have to do, is to convert some variables into factors and to create a new variable which is the ratio of advertising revenue over circulation. Here I specify the argument `across()` again of the `mutate()` function and within it, I give a vector `c()` containing all the variables that should be transformed to factors.
 
 Here is a brief explanation of the variables in the dataset:
 
-- `year`: The year of the observation
-- `id_news`: A unique identifier for each newspaper
-- `local`: A binary indicator (0 or 1) representing whether a newspaper is local or national (1 = local, 0 = national)
-- `national`: A binary indicator (0 or 1) representing whether a newspaper is national or local (1 = national, 0 = local)
-- `ra_cst`: The advertising revenue of the newspaper (in constant (2014) euros)
-- `ps_cst`: The price of subscriptions for the newspaper. This variable measures how much the newspaper charges for its subscriptions, reflecting its pricing strategy and revenue from readers
-- `qtotal`: The circulation of the newspaper. This variable measures the number of copies sold, reflecting the newspaper's readership and revenue from readers
-- `after_national`: A binary indicator (0 or 1) representing the interaction between a newspaper's national status and the post-television advertising era. Specifically, it marks the period after a newspaper has started national circulation and also corresponds to times after the introduction or significant increase of television advertising. This variable is designed to capture the combined effects of a newspaper reaching a national audience and the competitive or complementary impacts of television advertising on newspaper revenues or strategies
-- `ra_cst_div_qtotal`: A derived variable representing the advertising revenue per unit of circulation (`ra_cst / qtotal`). This variable is calculated to assess the efficiency or effectiveness of advertising revenue in relation to the newspaper's circulation size
+-   `year`: The year of the observation
+-   `id_news`: A unique identifier for each newspaper
+-   `local`: A binary indicator (0 or 1) representing whether a newspaper is local or national (1 = local, 0 = national)
+-   `national`: A binary indicator (0 or 1) representing whether a newspaper is national or local (1 = national, 0 = local)
+-   `ra_cst`: The advertising revenue of the newspaper (in constant (2014) euros)
+-   `ps_cst`: The price of subscriptions for the newspaper. This variable measures how much the newspaper charges for its subscriptions, reflecting its pricing strategy and revenue from readers
+-   `qtotal`: The circulation of the newspaper. This variable measures the number of copies sold, reflecting the newspaper's readership and revenue from readers
+-   `after_national`: A binary indicator (0 or 1) representing the interaction between a newspaper's national status and the post-television advertising era. Specifically, it marks the period after a newspaper has started national circulation and also corresponds to times after the introduction or significant increase of television advertising. This variable is designed to capture the combined effects of a newspaper reaching a national audience and the competitive or complementary impacts of television advertising on newspaper revenues or strategies
+-   `ra_cst_div_qtotal`: A derived variable representing the advertising revenue per unit of circulation (`ra_cst / qtotal`). This variable is calculated to assess the efficiency or effectiveness of advertising revenue in relation to the newspaper's circulation size
 
 ```{r}
 newspapers <-
@@ -66,13 +66,9 @@ newspapers <-
 newspapers
 ```
 
-
-
-
 ### Inspecting your data
 
-One of the first things you can do, is to plot your data points and see if something stands out. This might serve as a first indicator of anything that concerns the parallel trends assumption for example. The code below plots the development of advertising revenue for French newspapers in a given year. The panels are divided into local newspaper or national newspaper. Remember that our control group are local newspapers and the treatment group are the national ones. Essentially, we would expect that before the intervention, both groups should have parallel trajectories in their outcomes. This is the parallel trends assumption. If the parallel trends assumption holds, the difference between the treatment and control group should be constant over time. If the parallel trends assumption is violated, the DiD estimator will be biased. 
-
+One of the first things you can do, is to plot your data points and see if something stands out. This might serve as a first indicator of anything that concerns the parallel trends assumption for example. The code below plots the development of advertising revenue for French newspapers in a given year. The panels are divided into local newspaper or national newspaper. Remember that our control group are local newspapers and the treatment group are the national ones. Essentially, we would expect that before the intervention, both groups should have parallel trajectories in their outcomes. This is the parallel trends assumption. If the parallel trends assumption holds, the difference between the treatment and control group should be constant over time. If the parallel trends assumption is violated, the DiD estimator will be biased.
 
 ```{r}
 #| warnings: false
@@ -93,34 +89,31 @@ newspapers |>
 
 In the top panel/the local newspapers, the revenue data points are quite dense and cluster at regular intervals, suggesting that local newspapers had relatively stable advertising revenues year-to-year. There's no obvious trend or shift in revenue around the dashed vertical line, which likely represents the year 1967, the year when television advertising was introduced in France.
 
-The distribution of data points in the lower panel showing the observations of national newspapers is less dense compared to local newspapers, which could suggest greater variability in the advertising revenues of national newspapers. There appears to be a change around the dashed vertical line at 1967. [^1] After this year, there seems to be a wider spread of data points, including some years with significantly lower advertising revenues compared to previous years. This could indicate that national newspapers were more impacted by the introduction of television advertising. Overall, the graph suggests that the introduction of television advertising in 1967 may have had a differential impact on local and national newspapers, with national newspapers possibly experiencing greater negative effects on their advertising revenue.
+The distribution of data points in the lower panel showing the observations of national newspapers is less dense compared to local newspapers, which could suggest greater variability in the advertising revenues of national newspapers. There appears to be a change around the dashed vertical line at 1967. [^session4-1] After this year, there seems to be a wider spread of data points, including some years with significantly lower advertising revenues compared to previous years. This could indicate that national newspapers were more impacted by the introduction of television advertising. Overall, the graph suggests that the introduction of television advertising in 1967 may have had a differential impact on local and national newspapers, with national newspapers possibly experiencing greater negative effects on their advertising revenue.
 
-[^1]: I am not going to lie, I was hoping for a but of a clearer shift here... As you can see the causal effect is there mathematically but visually this could have been a bit more evident. This however emphasizes the importance of not only relying on visual inspection but rather your estimation strategy and being clear about the assumptions you are making.
+[^session4-1]: I am not going to lie, I was hoping for a but of a clearer shift here... As you can see the causal effect is there mathematically but visually this could have been a bit more evident. This however emphasizes the importance of not only relying on visual inspection but rather your estimation strategy and being clear about the assumptions you are making.
 
 However, just because some face validity seems to indicate that there is a difference in the treatment and control group, does not mean that it actually is in the data. We need to test this with a model that we will construct in the next section.
 
-
-
 ### Building the DiD model
+
 This here is the regression formula for the DiD analysis, including the interaction term in which we specify the treatment. The treatment is the introduction of ads on TV and the interaction term is the product of the treatment and the national status of the newspaper
 
 $$
 \ln(\mathrm{ra\_cst}) = \beta_0 + \beta_1 \mathrm{national} + \beta_2 \mathrm{after\_national} + \beta_3(\mathrm{national} \times \mathrm{after\_national}) + \beta_4 \mathrm{year} + \alpha_i + \epsilon
-$$
-- `ln(ra_cst)`: The natural logarithm of advertising revenue for a newspaper. Log transformation is often used in economic data to help normalize the distribution of skewed variables and to interpret the coefficients in terms of percentage changes
+$$ - `ln(ra_cst)`: The natural logarithm of advertising revenue for a newspaper. Log transformation is often used in economic data to help normalize the distribution of skewed variables and to interpret the coefficients in terms of percentage changes
 
-- `national`: This is a dummy variable indicating whether a newspaper is national (1) or local (0). This variable distinguishes the treatment group from the control group.
+-   `national`: This is a dummy variable indicating whether a newspaper is national (1) or local (0). This variable distinguishes the treatment group from the control group.
 
+-   `afternational`: A dummy variable indicating the time period after the introduction of television advertising in 1967 (1 for years 1967 and later, 0 for earlier years). It captures the before-and-after comparison.
 
-- `afternational`: A dummy variable indicating the time period after the introduction of television advertising in 1967 (1 for years 1967 and later, 0 for earlier years). It captures the before-and-after comparison.
+-   `national*after_national`: The interaction term between national and after_national. This term is crucial for DiD analysis as it estimates the differential effect of the introduction of television advertising on national newspapers compared to local newspapers over time
 
-- `national*after_national`: The interaction term between national and after_national. This term is crucial for DiD analysis as it estimates the differential effect of the introduction of television advertising on national newspapers compared to local newspapers over time
+-   `year`: A continuous variable representing the year of observation. Including this allows controlling for linear time trends that affect all newspapers
 
-- `year`: A continuous variable representing the year of observation. Including this allows controlling for linear time trends that affect all newspapers
+-   `alpha`: Newspaper fixed effects that control for all unobserved, time-invariant differences between newspapers
 
-- `alpha`: Newspaper fixed effects that control for all unobserved, time-invariant differences between newspapers 
-
-- `epsilon`: The error term
+-   `epsilon`: The error term
 
 This is the code to specify exactly this. Note that in R `national * after_national` includes three variables due to the `*` operator. It specifies the main effect of `national`, the main effect of `after_national` **and** the interaction effect `national:after_national`, representing the differential impact of the post-television advertising period specifically on national newspapers relative to local ones. If we had only put in `national:after_national`, we would have only included the interaction term and would have had to add the main effects manually. This means that the formula `log(ra_cst) ~ national*after_national + ...` is shorthand for `log(ra_cst) ~ national + after_national + national:after_national + ...`.
 
@@ -133,6 +126,7 @@ newspaper_did_model <-
 You can see that this is as straightforward as what we have already done in Session 1. It is a simple `lm()` and an interaction effect; nothing more...
 
 ### Interpreting the DiD model results
+
 Here, I am showing you a different way of displaying models in R/Quarto. I am making use of the fact that my quartobook is rendered to html. I am using the `modelsummary` package to display the results of the model in a nice table. Similar to the `stargazer` package, you can change almost every aspect of the table. I am using the `coef_omit` argument to exclude the fixed effects of the individual newspapers from the table. This is because we are not interested in them and it would have given us a lot of coefficients. I am also using the `coef_map` argument to rename the coefficients in the table. This package is maybe a bit more advanced but also more versatile.
 
 ```{r}
@@ -153,27 +147,19 @@ modelsummary(newspaper_did_model,
 
 ```
 
-
 This table reports the results from a difference-in-differences (DiD) regression model, which examines the impact of television advertising on the advertising revenues of national newspapers compared to local newspapers over time. The intercept we can disregard in this case. As a reminder, it is when all IVs are set to 0. It does not really make sense in our case, especially due to the year variable. I did drop the coefficients of all the fixed effects for the individual newspapers (which were in the factor variable of `id_news`) because we are not very interested in them and it would have given us an individual coefficient for each newspaper which would have been a lot of displayed coefficients. I used a regular expression (regex) for that. For now, you do not have to know what this is, but it is a very powerful tool to manipulate character strings. At some point, I will add this to the text-as-data tutorial or to the already existing webscraping script.
 
+-   **National Newspapers**: The coefficient for national newspapers is -1.039 and is highly statistically significant (p \< 0.001). This suggests that, holding other factors constant, the log of advertising revenue for national newspapers is, on average, 1.039 units lower than for local newspapers. This could imply that national newspapers, on their own, tend to have lower advertising revenue in this model or that they were already at a disadvantage before the treatment period.
 
+-   **Period After TV Ads**: The coefficient for the period after the introduction of television advertisements is very small and not statistically significant (-0.001, p \> 0.1). This indicates that the introduction of television advertising, when not considering whether a newspaper is national or local, does not have a significant overall effect on advertising revenues.
 
-- **National Newspapers**: The coefficient for national newspapers is -1.039 and is highly statistically significant (p < 0.001). This suggests that, holding other factors constant, the log of advertising revenue for national newspapers is, on average, 1.039 units lower than for local newspapers. This could imply that national newspapers, on their own, tend to have lower advertising revenue in this model or that they were already at a disadvantage before the treatment period.
+-   **Year**: The coefficient for the year variable is positive and significant (0.046, p \< 0.001), indicating that there is a general positive trend in advertising revenue over time across all newspapers in the sample.
 
-- **Period After TV Ads**: The coefficient for the period after the introduction of television advertisements is very small and not statistically significant (-0.001, p > 0.1). This indicates that the introduction of television advertising, when not considering whether a newspaper is national or local, does not have a significant overall effect on advertising revenues.
-
-- **Year**: The coefficient for the year variable is positive and significant (0.046, p < 0.001), indicating that there is a general positive trend in advertising revenue over time across all newspapers in the sample.
-
-- **Interaction Effect (National * After TV Ads)**: This is the center piece of our model since we try to estimate the causal effect through this interaction term. Fortunately for us, it is significant and negative (-0.228, p < 0.001). In DiD analyses, this interaction term captures the differential impact of the treatment effect (here, the introduction of television ads) on the treated group (national newspapers). The negative sign suggests that after television advertising started, national newspapers experienced a significant decrease in advertising revenue compared to local newspapers. This term essentially captures the essence of the DiD strategy by showing the relative effect post-treatment for the group of interest! 
-
+-   **Interaction Effect (National \* After TV Ads)**: This is the center piece of our model since we try to estimate the causal effect through this interaction term. Fortunately for us, it is significant and negative (-0.228, p \< 0.001). In DiD analyses, this interaction term captures the differential impact of the treatment effect (here, the introduction of television ads) on the treated group (national newspapers). The negative sign suggests that after television advertising started, national newspapers experienced a significant decrease in advertising revenue compared to local newspapers. This term essentially captures the essence of the DiD strategy by showing the relative effect post-treatment for the group of interest!
 
 So what do we conclude now? Concerning our Difference-in-Difference causal design, the model supports the hypothesis that the introduction of television advertising had a different negative impact on national newspapers' advertising revenues compared to local newspapers! The DiD model effectively isolates this effect by comparing the changes in revenues over time between the two groups (of course assuming parallel trends before the treatment).
 
-
-
-
-
 ## References
-:::{#refs}
-:::
 
+::: {#refs}
+:::

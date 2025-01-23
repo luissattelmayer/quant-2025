@@ -16,20 +16,21 @@ format:
 ```{=html}
 <style>body {text-align: right}</style>
 ```
+
 ```{r, include=FALSE}
 library(tidyverse)
 ```
 
 ## Introduction
-In this script, I will show you how to construct a multinomial logistic regression in R. For this, we will work on the *European Social Survey* (ESS) again. These are the main points that are covered in this script: 
 
-1. The logic of multinomial (logistic) regressions
-2. Advanced Data Management
-3. Interpretation of a multinomial Model
-4. Model Diagnostics
-5. Goodness of Fit
-6. APIs and Data Visualization (OPTIONAL!)
+In this script, I will show you how to construct a multinomial logistic regression in R. For this, we will work on the *European Social Survey* (ESS) again. These are the main points that are covered in this script:
 
+1.  The logic of multinomial (logistic) regressions
+2.  Advanced Data Management
+3.  Interpretation of a multinomial Model
+4.  Model Diagnostics
+5.  Goodness of Fit
+6.  APIs and Data Visualization (OPTIONAL!)
 
 ## The Logic of multinomial (logistic) Regressions
 
@@ -49,13 +50,11 @@ The data which we will use for this session is the 9th round of the ESS publishe
 
 My two hypotheses (**H1**) and **H2**) are as follows:
 
-
 > **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
 >
 > **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
 
-
-Now you might notice two things. First, my hypotheses are relatively self-explanatory and you are absolutely right. They are more than that, they are perhaps even self-evident. But to this, I would just reply that this is supposed to be an easy exercise which is supposed to expose you to a multinomial regression and the logic of it. Second, you might see that my hypotheses are relatively broadly formulated. This is because I would like you, later in class, to choose one of the countries of the 9th wave of the ESS and build a model yourselves. By giving you broad hypotheses, you can do this ;) 
+Now you might notice two things. First, my hypotheses are relatively self-explanatory and you are absolutely right. They are more than that, they are perhaps even self-evident. But to this, I would just reply that this is supposed to be an easy exercise which is supposed to expose you to a multinomial regression and the logic of it. Second, you might see that my hypotheses are relatively broadly formulated. This is because I would like you, later in class, to choose one of the countries of the 9th wave of the ESS and build a model yourselves. By giving you broad hypotheses, you can do this ;)
 
 ```{r}
 # read_csv from the tidyverse package
@@ -213,7 +212,6 @@ stargazer::stargazer(
 )
 ```
 
-
 ```{r}
 #| output: asis
 #| fig-align: center
@@ -242,9 +240,7 @@ stargazer::stargazer(
 
 ```
 
-
 The format of the regression table on our Danish model is not ideal since the names of the parties are quite long and overlap. Blame this on my lack of knowledge of abbreviations of Danish parties...
-
 
 ## Interpreting a Multinomial Regression Table
 
@@ -260,12 +256,9 @@ Remember that these are the coefficients of logistic regressions. We cannot inte
 
 As a reminder, these were my initial (frankly also bad) hypotheses:
 
->**H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
+> **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
 >
->**H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
-
-
-
+> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
 
 I am now interested to see the effect of positivity toward migration and trust in politicians *on* the vote choice for each party *instead* of the AFD. What we can see is that a one-unit increase in positive attitudes toward migration (thinking that immigrants culturally enrich the respondents' country) raises the likelihood for voting for all other parties *instead* of voting for the AFD. In the case of the first column, in which the vote was either for the CDU/CSU or the AFD, a one unit increase in stances on immigration results in a higher likelihood of voting of voting for the CDU/CSU than the AFD.
 
@@ -348,7 +341,7 @@ ggplot(data = pred2$plotdata, aes(
 
 Here we can see very well by how many percent the likelihood increases or decreases for each party given that our independent variable, our predictor, of trust in politicians increases (increasing values mean more trust in politicians).
 
-We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: \href{https://g.co/kgs/6MxyCy}{https://g.co/kgs/6MxyCy} (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected. 
+We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: \href{https://g.co/kgs/6MxyCy}{https://g.co/kgs/6MxyCy} (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected.
 
 ```{r}
 ggplot(data = pred2$plotdata, aes(
@@ -490,34 +483,31 @@ What would a similar model look like? Well, if we dropped one of our IVs for exa
 
 What is a better AIC? The **lower** AIC indicates that the model fits our data better than the model with the higher AIC. This is simply a mathematical measure. Stand-alone values of the AIC do not tell us much. They need to be considered in comparison to other values.
 
-
-
 ### BIC (Bayesian Information Criterion)
 
 Bayesian Statistics [^session3-1] are super fascinating and I will include them wherever I can. Luckily, the BIC is very common and is to the AIC what the adjusted $R^2$ is to the $R^2$. This means that it is a "stricter" measure of goodness of fit than the AIC. It is quite similar to the AIC but differs in that it penalizes you for adding "less useful" variables to your model (potentially *overfitting* or overcomplexifing your model). Thus, similarly to the AIC, we should also favor the **lower** BIC!
 
 [^session3-1]: The second school of doing statistics. What we are doing is called *frequentist* statistics. Bayesian statistics are a bit more complicated and require a different way of thinking about statistics but they are the more intuitive way of conducting statistics (without p-values but with something you could call *certainty*). They are also more computationally expensive and thus, have only gained traction over the recent decades. They are gaining more and more popularity. If you are interested in learning more about them, I recommend the book by Richard McElreath (2016) [*Statistical Rethinking: A Bayesian Course with Examples in R and Stan*](https://github.com/rmcelreath/stat_rethinking_2024). He also has lectures on YouTube that follow the book. Definitely worth a try!
 
-
-
 ## APIs and Fun Data Visualization (OPTIONAL!)
+
 In this session's optional section, I will introduce you to the logic of APIs and how to use them in R. Further, we will use data from Spotify (which we will collect through their API) to make fun data visualizations!
 
 ### What is an API?
-API stands for *Application Programming Interface*. It is a way for two applications to communicate with each other. This is a very technical way of saying that an API allows us to carefully and *gently* collect data from a server, a website or a database. APIs are a very common way of collecting data from websites. Most websites use internal APIs to communicate with their own databases [^session3-2], whereas some websites also offer public APIs which allow you to collect data from their website. 
 
-Think about APIs like this: You go to a restaurant and you want to eat. You could be very rude, ignore every other customer, ignore every social norm you have ever learned and go to the kitchen to tell the chef what you want. Now, if only one person did this, nothing would happen (even if I were surprised if the chef would take your order). But if now every customer did this, started yelling their order at the chef, he would probably just stop working and throw in the towel, or worse, throw you out of the restaurant. To avoid that, there are waiters and waitresses that usually come to your table, take your order, deliver that to the kitchen and once your dish is ready, you will get it to your table. Transposing this onto APIs, the waiter/waitress is our API. They make sure that we can communicate with the kitchen (the database) without disrupting the work of the chef (the server).
+API stands for *Application Programming Interface*. It is a way for two applications to communicate with each other. This is a very technical way of saying that an API allows us to carefully and *gently* collect data from a server, a website or a database. APIs are a very common way of collecting data from websites. Most websites use internal APIs to communicate with their own databases [^session3-2], whereas some websites also offer public APIs which allow you to collect data from their website.
 
 [^session3-2]: This is a fun exercise for webscraping and you can imitate the websites' calls to their server API to collect data but more on that at a later point.
+
+Think about APIs like this: You go to a restaurant and you want to eat. You could be very rude, ignore every other customer, ignore every social norm you have ever learned and go to the kitchen to tell the chef what you want. Now, if only one person did this, nothing would happen (even if I were surprised if the chef would take your order). But if now every customer did this, started yelling their order at the chef, he would probably just stop working and throw in the towel, or worse, throw you out of the restaurant. To avoid that, there are waiters and waitresses that usually come to your table, take your order, deliver that to the kitchen and once your dish is ready, you will get it to your table. Transposing this onto APIs, the waiter/waitress is our API. They make sure that we can communicate with the kitchen (the database) without disrupting the work of the chef (the server).
 
 Usually APIs are win-win situations for us and for them. They can control how much data we collect from them, they can dictate the rules and have traces of what we were doing when and where. And we can collect data without disrupting their work. However, sometimes APIs are not public and we need to find other ways to collect data from websites. This is called *webscraping* and is a bit more complicated and in the appendix.
 
 Some APIs are more useful than others. The [New York Times' one](https://developer.nytimes.com/) is unfortunately quite useless. Spotify's API is more fun, as we will see in a bit. Twitter used to have one of the best developer's accesses to their data through a wonderful API until he-who-must-not-be-named destroyed the platform. But also government websites have APIs which make it a bit more regulated to access their data.
 
-
 ### Spotify API
-For the sake of the example, we will use the Spotify API to communicate with the Spotify servers and ask them for data. You usually have to sign up for an API on the respective website. If you want to reproduce my code, you will have to sign up for a Spotify API [here](https://developer.spotify.com/dashboard/login). Once you have signed up, you will be able to create a new app. This will give you a client ID and a client secret. These are your credentials to access the API. You will need them to access the API.
 
+For the sake of the example, we will use the Spotify API to communicate with the Spotify servers and ask them for data. You usually have to sign up for an API on the respective website. If you want to reproduce my code, you will have to sign up for a Spotify API [here](https://developer.spotify.com/dashboard/login). Once you have signed up, you will be able to create a new app. This will give you a client ID and a client secret. These are your credentials to access the API. You will need them to access the API.
 
 ```{r}
 #| messages: false
@@ -531,23 +521,22 @@ needs('spotifyr',
       'usethis')
 ```
 
-
 ### System Enivronments and API keys
-We will get a bit more technical and speak about good practices in R for a second. When you apply to an API or sign up for an access, you will usually get a sort of key, clientID or something to authenticate yourself whenever you make requests to the API. This way, they know that it is you who is making requests and that you are validated by them. This information is **sensitive**! You do not share it with anyone, and you never show this to anyone. This is why you need to store it somewhere safe. One of the options we have in R is to save them in our system environment. It is a file in which we can store these things. Honestly, the keys to APIs are really long and complicated and you do not want to type them in every time you want to use them. So, we will store them in our system environment. This is a bit more complicated than just typing them in, but it is a good practice. It is also not the safest way to do it but for simplicity's sake we will do it like this for now. 
 
-::: {.callout-note}
+We will get a bit more technical and speak about good practices in R for a second. When you apply to an API or sign up for an access, you will usually get a sort of key, clientID or something to authenticate yourself whenever you make requests to the API. This way, they know that it is you who is making requests and that you are validated by them. This information is **sensitive**! You do not share it with anyone, and you never show this to anyone. This is why you need to store it somewhere safe. One of the options we have in R is to save them in our system environment. It is a file in which we can store these things. Honestly, the keys to APIs are really long and complicated and you do not want to type them in every time you want to use them. So, we will store them in our system environment. This is a bit more complicated than just typing them in, but it is a good practice. It is also not the safest way to do it but for simplicity's sake we will do it like this for now.
+
+::: callout-note
 If you want to follow my code and run it on your end, you will have to first sign up to the Spotify developer's portal, generate the key and clientID and come back to my script then.
 :::
 
-This line of code opens up a file called `.Renviron` in which we can store our keys. If you have never done this before, it will open up a new file. If you have done this before, it will open up the file in which you probably already have things stored. 
-
+This line of code opens up a file called `.Renviron` in which we can store our keys. If you have never done this before, it will open up a new file. If you have done this before, it will open up the file in which you probably already have things stored.
 
 ```{r}
 #| eval: false
 usethis::edit_r_environ()
 ```
 
-Once you have opened the file, you can add the following lines to it. You will have to replace the `XXXX` with your own keys. Once you have done that, save the file **and restart R**! This is necessary for the changes to take effect. 
+Once you have opened the file, you can add the following lines to it. You will have to replace the `XXXX` with your own keys. Once you have done that, save the file **and restart R**! This is necessary for the changes to take effect.
 
 ```{r}
 #| eval: false
@@ -557,8 +546,7 @@ SPOTIFY_CLIENT_SECRET = "XXXX"
 SPOTIFY_REDIRECT_URI = "http://localhost:1410/"
 ```
 
-
-Now that we have added the sensitive information to our R Environment, it will remain there until we decide to delete it. If we need to load it now, we can run these lines of code: 
+Now that we have added the sensitive information to our R Environment, it will remain there until we decide to delete it. If we need to load it now, we can run these lines of code:
 
 ```{r}
 client_id <- Sys.getenv("SPOTIFY_CLIENT_ID")
@@ -567,123 +555,6 @@ redirect_uri <- Sys.getenv("SPOTIFY_REDIRECT_URI")
 ```
 
 
-
-### Getting the data from Spotify
-This is where the technical part is over and we can finally turn to the more fun side of things and collect data from Spotify. We will use the `spotifyr` package to do so. This package is a wrapper for the Spotify API. It makes it easier for us to collect data from Spotify. It has been developed by [Charlie Thompson](https://github.com/charlie86/spotifyr) and is a great example of how to use APIs in R. 
-
-Again, credit where credit is due: When I first discovered the Spotify API, I got a lot of inspiration from this [chapter](https://bookdown.org/paul/apis_for_social_scientists/spotify-api.html) by [Marie-Lou Sohnius](https://www.nuffield.ox.ac.uk/people/profiles/marie-lou-sohnius/) and [Johanna Mehltretter](https://www.sowi.uni-mannheim.de/keusch/team/academic-staff-members/mehltretter-johanna/).
-
-
-Store your credentials in an object. This will only work if you have properly saved your Spotify access keys and credentials to your system environment.
-```{r}
-access_token <- get_spotify_access_token()
-```
-
-
-We will use the `get_playlist_audio_features()`. This function will collect all the information of a specific Spotify playlist. There is an insane amount of information that we can already extract with this. We will use the playlist of the top 50 songs in the France You can find the playlist [here](https://open.spotify.com/playlist/37i9dQZEVXbIPWwFssbupI). The playlist has a unique identifier, called a URI (= Uniform Resource Identifier which is a sequence that identifies resources found on the internet). To find the URI, you simply open the Spotify web browser, log in, and go to any playlist of your choice. The URL for the Top 50 of France is `https://open.spotify.com/playlist/37i9dQZEVXbIPWwFssbupI`. The URI is the last part of the URL: `37i9dQZEVXbIPWwFssbupI`. Below, we simply feed it into the function and can store all the information about the Top 50 songs in an object. 
-
-
-
-
-```{r}
-top50 <- get_playlist_audio_features(playlist_uris = '37i9dQZEVXbIPWwFssbupI') 
-```
-
-We can have a look at the data. It is a tibble with 50 rows and 61 columns. Each row is a song and each column is a variable. We have the name of the song, the artist, the album, the URI, the danceability, the energy, the key, the loudness, the mode, the speechiness, the acousticness, the instrumentalness, the liveness, the valence, the tempo, the duration, the time signature and the date of release. All in all, quite some data.
-
-```{r}
-glimpse(top50)
-```
-
-
-### Preparing the data
-For any further operation, we will first have to create a rank, or identifier for each song. In the next step, we use a simple for-loop to extract the artist and the image of the album cover. We will use the `ggimage` package to plot the album covers.
-```{r}
-#| warning: false
-#| eval: false
-top50$rank <- seq.int(nrow(top50))
-
-
-for (i in 1:50) {
-  top50$artist[i] <- top50[[28]][[i]]$name
-  top50$image[i] <- c(top50[[48]][[i]]$url[2], size=10, replace = TRUE)
-}
-```
-
-
-### Plotting the data
-Unfortunately, Spotify has no documentation on how they measure or decide which song is more lively, acoustic or danceable than others. But we can probably get the gist of it by listening to the songs. Below we can plot the songs by their danceability and happiness. The happier the song, the more to the right it is. The more danceable the song, the higher it is. We can see that there seems to be a linear relationship between danceability and happiness, which does not necessarily come as a surprise.
-
-```{r}
-#| eval: false
-
-ggplot(data = top50, aes(x = valence, y = danceability, text = (
-  paste("Track:",
-        track.name,
-        "<br>",
-        "Artist:",
-        artist)
-))) +
-  geom_image(aes(image = image), asp = 1.5) +
-  theme_minimal() +
-  ylab("Danceability") +
-  xlab("Happiness") 
-```
-
-But we can also see that there are some outliers. There are some songs that are very happy but not very danceable. And there are some songs that are very danceable but not very happy. We can have a look at these songs. 
-
-
-Using the `ggridges` package we can study the distribution of some of our variables. The code below extracts data on all Taylor Swift albums and songs. We can then plot the distribution of the happiness of her songs:
-
-```{r}
-library(ggridges)
-
-taylor <- get_artist_audio_features('taylor swift')
-
-taylor_filtered <- taylor |>
-  filter(
-    album_name %in% c(
-      "Speak Now (Taylor's Version)",
-      "evermore",
-      "Fearless (Taylor's Version)",
-      "folklore",
-      "Midnights (3am Edition)",
-      "Red (Taylor's Version)",
-      "Taylor Swift",
-      "reputation",
-      "1989 (Taylor's Version)",
-      "Lover"
-    )
-  ) |>
-  arrange(album_release_year)
-
-ggplot(taylor_filtered,
-       aes(x = valence, y = album_name, fill = after_stat(x))) +
-  geom_density_ridges_gradient() +
-  scale_fill_viridis_c(name = "Happiness", option = "C") +
-  labs(title = "Joyplot of Taylor Swift Albums (Based on Spotify's valence value)",
-       subtitle = " Built using the R-package spotifyr") +
-  theme_minimal() +
-  ylab("Album Name") +
-  xlab("Happiness score according to Spotify")
-
-
- 
-```
-
-Here is the danceability of her albums: 
-
-```{r}
-ggplot(taylor_filtered,
-       aes(x = danceability, y = album_name, fill = after_stat(x))) +
-  geom_density_ridges_gradient() +
-  scale_fill_viridis_c(name = "Danceability", option = "F") +
-  labs(title = "Danceplot of Taylor Swift Albums",
-       subtitle = " Built using the spotifyr package") +
-  theme_minimal() +
-  ylab("Album Name") +
-  xlab("Danceability score according to Spotify")
-```
 
 
 

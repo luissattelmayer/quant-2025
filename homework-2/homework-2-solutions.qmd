@@ -1,0 +1,129 @@
+---
+title: "Homework 2 Solutions"
+author: "Luis Sattelmayer"
+date: "07/03/2024"
+format: html
+---
+
+# 1. Data Management
+
+```{r}
+library(tidyverse)
+ess <- read_csv("ESS_9.csv") |>  
+  dplyr::select(cntry, 
+                polintr, 
+                trstprt, 
+                vote,
+                lsprty, 
+                gndr,
+                yrbrn, 
+                eduyrs) |> 
+  filter(cntry == "SE")
+```
+
+
+
+## 1.1 Cleaning the DV
+1. After this step, drop the values of your dependent variable that we are not going to need and transform the 1s and 2s to 0s and 1s so that it is perfectly binary. **Set it to**: 0 = not feeling close to a party; 1 = feeling close to a party!
+
+Hint: Something containing the `mutate()` function and maybe an `ifelse` conditional statement? Don't forget to `filter()` your variable of unwanted values first (drop them).
+
+```{r}
+ess <- ess |> 
+  filter(!clsprty %in% 8) |> 
+  mutate(clsprty = ifelse(clsprty == 2, 0, 1))
+
+```
+
+
+## 1.2 Cleaning the IVs
+1. Find a way to drop or mutate your independent variables so that they only contain the values that also correspond to something. This means that we want to get rid of the 99, 88, 7777 etc that correspond to "not responded", "no answer" etc. You do not have to do this in one long pipe (`%>%` or `|>`) but you can take as many lines of code as you want.
+
+We will need clean versions of these independent variables: 
+
+- polintr
+- trstprt
+- vote (coded as a dummy; 0 = has not voted/1 = has voted)
+- gndr (male = 0; female = 1)
+- yrbrn 
+- eduyrs
+
+Hint: `mutate()` is still the best help here.
+
+```{r}
+library(naniar)
+# specify a string of numbers we are absolutely certain we won't need
+unwanted_numbers <- c(66, 77, 88, 99, 7777, 8888, 9999)
+
+# make sure to create a new object/data frame; if you don't and re-run your code
+# a second time, it will transform some mutated values again!
+ess_final <- ess |> 
+  # filtering the dependent variable to get rid of any unnecessary rows
+  filter(!vote %in% c(3, 7, 8, 9)) |> 
+  # using the naniar package, we can transform unwanted values to NAs
+  naniar::replace_with_na_all(condition = ~.x %in% unwanted_numbers) |> 
+  # mutate allows us to transform values within variables into other values or NAs
+  mutate(polintr = replace(polintr, polintr %in% c(7:9), NA),
+         # same for gender
+         gndr = recode(gndr, `1` = 0, `2` = 1),
+         # vote as binary 0 (voted) & 1 (abstention))
+         vote = ifelse(vote == 1, 1, 0)) 
+```
+
+
+A final check that all our variables have been properly recoded:
+```{r}
+summary(ess_final)
+```
+
+
+
+# 2. Constructing and Interpreting the Model
+1. From here on, you can use your own cleaned data set if you were able to find the solutions. If you are not sure, or have tried but did not make it, that is absolutely okay and I would kindly ask you to downloaded the clean version of the data set from Moodle in order to construct your model and work on the second part of exercises. 
+
+## 2.1 Building the Model
+1. Build a logistic regression model with the `glm()` function. Specify the distribution as binomial and the family as logit. Remember that we regress the independent variables on the one dependent variable by using the tilde `~` . Regress vote, political interest, trust for a party, gender, age, and education on feeling close to a given party.
+
+Hint: You only need to change some variables from my code... 
+
+
+```{r}
+logit <- glm(clsprty ~ polintr + trstprt + vote + gndr + 
+               yrbrn + eduyrs, data = ess_final, family = binomial(link = logit))
+```
+
+
+
+## 2.2 Regression Table and Giving a First Interpretation
+1. Give me one of the two ways to have a regression table as an output in your Markdown document and *carefully* **comment** on your coefficients. This means you have to write something!
+
+
+```{r}
+stargazer::stargazer(logit, type = "text")
+```
+
+
+## 2.3 Odds-Ratio
+1. Find a way to calculate the odds-ratio and interpret the results. If you can, add the confidence intervals! I know that this is complicated so maybe you might want to use one of the easier ways I have showed you in my script.
+
+Hint: Odds-Ratio = Exponentiated coefficients
+
+Hint2: For the interpretation, I believe that interpreting percentages is easier than decimals.
+
+**Bonus points**
+
+
+## 2.4 Calculate the predicted probabilites
+1. Please calculate the predicted probabilities of one statistically significant variable of your choice. You can do this by hand or by using the `ggpredict` or the `marginal effects` package. 
+
+**Bonus points** if you also include code that manually holds the variables constant while calculating the predicted probabilities of one variable of interest.
+
+## 2.5 Visualizing
+1. Plot the predicted probability of your independent variable of interest and *interpret* the graph. 
+
+
+
+
+
+
+
