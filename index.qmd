@@ -1,0 +1,48 @@
+# Course Overview {.unnumbered}
+<style>body {text-align: justify}</style>
+
+This repository contains all the course material for the RStudio Labsessions for the Spring semester 2024 at the School of Research at SciencesPo Paris. The class follows [Brenda van Coppenolle's](https://www.sciencespo.fr/centre-etudes-europeennes/fr/chercheur/brenda-van-coppenolle.html) and [Jan Rovny's lecture on Quantitative Methods II](https://www.rovny.org/methods-2-ed). Furthermore, the RStudio part of the course is a direct continuation of [Malo Jan's RStudio introduction course](https://github.com/malojan/intro_r?tab=readme-ov-file). If you feel the need to go back to some basics of general R use, data management or visualization, feel free to check out his [course's website](https://malo-jn.quarto.pub/introduction-to-r/). Rest assured, however, that 1) we will recap plenty of things, 2) make slow but steady progress, 3) and come back to the essentials of data wrangling again during the semester while building statistical models.
+
+## Course Structure
+
+In total we will see each other 6 times. The lessons will be structured in such a way that I will first present something to you and explain my script. Ideally, you will then start coding in groups of 2 and work on exercises related to the topic. You can find more information about the exercises in the subsection "course validation". I will of course be there to help you. The rest you solve at home and send me your final script. At the beginning of each next meeting we will go through the solutions together. Also, I upload my own script before each session, so you can use it as a template when solving the tasks and also later, when the course is over, as a template for further coding (if you like of course...).
+
+| Session   | Description            | Dates |
+|-----------|------------------------|-----------------|
+| Session 1 | RStudio Recap & OLS    |   01/02 & 08/02              |
+| Session 2 | Logistic Regressions   |   15/02 & 29/02              |
+| Session 3 | Multinomial Regression |   07/03 & 14/03              |
+| Session 4 | Causal Inference I      |   21/03 & 28/03              |
+| Session 5 | Causal Inference II            |   04/04 & 11/04              |
+| Session 6 | Time Series           |   18/04 & 25/04              |
+
+## Course Validation
+
+In the two weeks between each lecture, you will be given exercises to upload to the designated link for each session. The document where you write the solutions must be written in Markdown format.
+
+I will grade your solutions to my exercises on a 0 to 5 scale. I would like to see that you have done something and hopefully finished the exercise. If you are unable to finish the exercise, it is no problem and I do understand that not everybody feels as comfortable with R as some other people might do. Handing something in is key to getting points! This class can be finished by everyone and I do not want you to worry about your grade too much. But I would like that you all at least try to solve the exercises! Work in groups of **two** and try to hand in something after each session. The precise deadline will be communicated in class, the course's [GitHub page](https://github.com/luissattelmayer/quantitative-methods-2024) and on the Moodle page.
+
+## Optional Course Parts
+When I taught the course last year, some students approached me and asked for several levels of difficulty. I will try to implement this in the homework and in class. I have also decided to add an optional part to each session. In the optional parts, I will introduce new packages, advanced methods, and I will also upload a few scripts in the appendix on things like text-as-data, webscraping or similar, if I have the time. Also -- again, if the times allows it -- I will go through these optional parts in class. But please be assured that if you decide not to follow the optional parts, that is okay. But if you do, I can promise you will make better and faster progress. Lastly, if you are interested in certain things, want to learn about specific methods or how to implement things or workflows in RStudio, please do not hesitate to contact me and I will see if I can squeeze it in somewhere.
+
+
+## Requirements
+
+You must have downloaded R and RStudio by the beginning of the course (you need to install both!) before our sessions. Please let me know if you encounter any problems during the installation. Here is a quick guide on how to do that: <https://rstudio-education.github.io/hopr/starting.html>
+
+R and RStudio are both free and open source. You need both of them installed in order to operate with the R coding language.
+
+For R, go on the CRAN website and download the file for your respective operating system: <https://cran.r-project.org/> For RStudio, you need to do the same thing by clicking on this link: <https://posit.co/products/open-source/rstudio/> RStudio has received a new name recently ("posit") but you will still find all the necessary steps behind this link under the name of RStudio.
+
+Otherwise, there are few prerequisites except that you must bring your computer to the sessions with the required programs installed. I will provide you with datasets in each case and I will explain everything else in the course.
+
+## Help and Office Hours
+
+There are unfortunately no regular office hours. But please do not hesitate to reach out, if you have any concerns, questions or feedback for me! My inbox is always open. I tend to reply quickly but in the case that I have not replied in under 48h, simply send the email again. I will not be offended!
+
+Learning how to code and working with RStudio can be a struggle and a tough task. I have started out once like you and I will try to keep that in mind. Feel free to always ask questions in class or if you see me on campus. The most important thing, however, is that you try!
+
+## Acknowledgements 
+This is only a quick section to give credit, where credit is due! [Malo Jan](https://www.sciencespo.fr/centre-etudes-europeennes/fr/chercheur/malo-jan.html) is one of my daily inspirations for anything that has to do with research and RStudio. I have taught this class already last year and had most of my scripts written in PDFs but Rohan Alexander's book [Telling Stories with Data](https://tellingstorieswithdata.com/) served as a new inspiration to write this course in its Quarto book format. Also shout outs to [Felix Lennert](https://felix-lennert.netlify.app/) and some of his ideas for the homework. 
+
+

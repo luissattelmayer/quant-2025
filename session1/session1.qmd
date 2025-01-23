@@ -1,0 +1,276 @@
+# RStudio Recap & OLS
+
+
+## Introduction 
+
+This is a short recap of things you have seen last year and will need this year as well. It will refresh your understanding of the linear regression method called *ordinary least squares* (OLS). This script is supposed to serve as a cheat sheet for you to which you can always come back to.
+
+These are the main points of today's session and script: 
+
+1. A refresher of Ordinary Least Squares (OLS)
+2. What is Base R and what are packages?
+3. A recap of basic coding in R
+4. Building & Interpreting a simple linear model
+5. Visualizing Residuals
+6. The `broom` package (OPTIONAL!)
+
+These are the packages we will be using in this session: 
+
+```{r}
+needs(
+  tidyverse,
+  rio, 
+  stargazer,
+  broom,
+)
+```
+
+
+## Ordinary Least Squares (OLS)
+OLS regressions are the powerhouse of statistics. The world must have been a dark place without them. They are the most basic form of linear regression and are used to predict the value of a dependent variable (DV) based on the value of independent variables (IVs). It is important to note that the relationship between the DV and the IVs is assumed to be **linear**.
+
+As a quick reminder, this is the formula for a basic linear model: $\widehat{Y} = \widehat{\alpha} + \widehat{\beta} X$.
+
+OLS is a certain kind of method of linear model in which we choose the line which has the least prediction errors. This means that it is the best way to fit a line through all the residuals with the least errors. It minimizes the sum of the squared prediction errors $\text{SSE} = \sum_{i=1}^{n} \widehat{\epsilon}_i^2$
+
+Five main assumptions have to be met to allow us to construct an OLS model:
+
+1.  Linearity: Linear relationship between IVs and DVs
+2.  No endogeneity between $y$ and $x$
+3.  Errors are normally distributed
+4.  Homoscedasticity (variance of errors is constant)
+5.  No multicolinearity (no linear relationship between the independent variables)
+
+For this example, I will be working with some test scores of a midterm and a final exam which I once had to work through. We are trying to see if there is a relationship between the score in the midterm and the grade of the final exam. Theoretically speaking, we would expect most of the students who did well on the first exam to also get a decent grade on the second exam. If our model indicates a statistical significance between the independent and the dependent variable and a positive coefficient of the former on the latter, this theoretical idea then holds true.
+
+## Coding Recap
+
+Before we start, let's refresh our coding basics again. RStudio works with packages and libraries. There is something called *Base R*, which is the basic infrastructure that R always comes with when you install it. The R coding language has a vibrant community of contributors who have written their own packages and libraries which you can install and use. As Malo, I am of the `tidyverse` school and mostly code with this package or in its style when I am wrangling with data, changing its format or values and so on. Here and there, I will, however, try to provide you with code that uses Base R or other packages. In coding, there are many ways to achieve the same goal -- and I will probably be repeating this throughout the semester -- and we always strive for the fastest or most automated way. I will not force the `tidyverse` environment on you but I do think that it is one of the most elegant and fastest way of doing statistics in R. It is sort of my RStudio dialect but you can obviously stick to yours if you have found it. Also, as long as you find a way that works for you, that is fine with me!
+
+To load the packages, we are going to need:
+
+```{r}
+library(tidyverse)
+```
+
+Next we will import the dataset of grades.
+
+```{r}
+data <- read_csv("course_grades.csv")
+```
+
+The path which I specify in the `read_csv` file is short as this quarto document has the same working directory to which the data set is also saved. If you, for example, have your dataset on your computer's desktop, you can access it via some code like this one:
+
+```{r eval = FALSE}
+data <- read_csv("~/Desktop/course_grades.csv")
+```
+
+Or if it is within a folder on your desktop:
+
+```{r, eval = FALSE}
+data <- read_csv("~/Desktop/folder/course_grades.csv")
+```
+
+:::{.callout-important} 
+I will be only working within [.Rproj files](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) and so should you. [^session1-1] This is the only way to ensure that your working directory is always the same and that you do not have to change the path to your data set every time you open a new RStudio session. Further, this is the only way to make sure that other collaborators can easily open your project and work with it as well. Simply zip the file folder in which you have your code and
+
+:::
+
+[^session1-1]: Malo's explanation and way of introducing you to RStudio projects can be found [here](https://malo-jn.quarto.pub/introduction-to-r/session1/0105_import.html).
+
+You can also import a dataset directly from the internet. Several ways are possible that all lead to the same end result:
+
+```{r, eval = FALSE}
+dataset_from_internet_1 <- read_csv("https://www.chesdata.eu/s/1999-2019_CHES_dataset_meansv3.csv")
+  
+# this method uses the rio package
+library(rio)
+dataset_from_internet_2 <- import("https://jan-rovny.squarespace.com/s/ESS_FR.dta")
+```
+
+
+Let's take a first look at the data which we just imported:
+
+
+```{r}
+# tidyverse
+glimpse(data)
+
+# Base R
+str(data)
+```
+
+
+Something does not look right, this happens quite frequently when saving a csv file. It stands for *comma separated value*. R is having trouble reading this file since I have saved all grades with commas instead of points. Thus, we need to use the `read_delim()` function. Sometimes the `read_csv2()` function also does the trick. You'd be surprised by how often you encounter this problem. This is simply to raise your awareness to it!
+
+The `read_delim()` function is the overall function of the `readr` package to read any sort of data file, whereas `read_csv()` and `read_csv2()` are specific functions to read csv files. The `read_delim()` function has a `delim` argument which you can use to specify the delimiter of your data file. For the sake of the example, I had purposefully saved the csv file using the `|` delimiter. 
+
+
+```{r}
+data <- read_delim("course_grades.csv", delim = "|")
+glimpse(data)
+```
+
+This time, it has been properly imported. But by looking closer at it, we can see that there are two columns in the data frame that are empty and do not even have a name. We need to get rid of these first. Here are several ways of doing this. In coding, many ways lead to the same goal. In R, some come with a specific package, some use Base R. It is up to you to develop your way of doing things.
+
+```{r, eval = FALSE}
+# This is how you could do it in Base R
+data <- data[, -c(4, 5)]
+
+# Using the select() function of the dplyr package you can drop the fourth
+# and fifth columns by their position using the - operator and the -c() to
+# remove multiple columns
+data <- data  |>  select(-c(4, 5))
+
+# I have stored the mutated data set in the old object; 
+# you can also just transform the object itself...
+data |> select(-c(4, 5))
+
+# ... or create a new one
+data_2 <- data |> select(-c(4, 5))
+```
+
+```{r, include = FALSE}
+data <- data |> select(-c(4, 5))
+```
+
+Now that we have set up our data frame, we can build our OLS model. For that, we can simply use the `lm()` function that comes with Base R, it is built into R so to speak. In this function, we specify the data and then construct the model by using the tilde (`~`) between the dependent variable and the independent variable(s). Store your model in an object which can later be subject to further treatment and analysis.
+
+```{r}
+model <- lm(final_exam ~ midterm, data)
+summary(model)
+
+```
+
+Since the `summary()` function only shows us something in our console and the output is not very pretty, I encourage you to use the `broom` package for a nicer regression table.
+
+```{r}
+broom::tidy(model)
+```
+
+You can also use the `stargazer` package in order to export your tables to text or LaTeX format which you can then copy to your documents. 
+
+```{r}
+library(stargazer)
+stargazer(model, type = "text", out = "latex")
+```
+
+
+## Interpretation of OLS Results
+
+How do we interpret this?
+
+-   **R2**: Imagine you're trying to draw a line that best fits a bunch of dots (data points) on a graph. The R-squared value is a way to measure how well that line fits the dots. It's a number between 0 and 1, where 0 means the line doesn't fit the dots at all and 1 means the line fits the dots perfectly. R-squared tells us how much of the variation in the dependent variable is explained by the variation in the predictor variables.
+-   **Adjusted R2**: Adjusted R-squared is the same thing as R-squared, but it adjusts for how many predictor variables you have. It's like a better indicator of how well the line fits the dots compared to how many dots you're trying to fit the line to. It always adjusts the R-squared value to be a bit lower so you always want your adjusted R-squared value to be as high as possible.
+-   **Residual Std. Error**: The residual standard error is a way to measure the average distance between the line you've drawn (your model's predictions) and the actual data points. It's like measuring how far off the line is from the actual dots on the graph. Another way to think about this is like a test where you want to get as many answers correct as possible and if you are off by a lot in your answers, the residual standard error would be high, but if you are only off by a little, the residual standard error would be low. So in summary, lower residual standard error is better, as it means that the model is making predictions that are closer to the true values in the data.
+-   **F Statistics**: The F-statistic is like a test score that tells you how well your model is doing compared to a really simple model. It's a way to check if the model you've built is any better than just guessing. A large F-statistic means that your model is doing much better than just guessing.
+
+## Visualizing the Regression Line
+Just for fun and to refresh you `ggplot` knowledge, let's visualize the regression line. Here, we specify 
+
+
+
+```{r}
+ggplot(data, aes(x = midterm, y = final_exam)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+    labs(
+    title = "Relationship between Midterm and Final Exam Scores",
+    x = "Midterm Scores",
+    y = "Final Exam Scores"
+  ) +
+  theme_minimal()
+```
+
+
+Remember how I told you above that OLS was about finding the smallest amount of squared errors! This is what we can visualize here. The red lines are the distance from the residuals to the fitted line. The OLS line is the line that minimizes the sum of the squared errors! 
+
+```{r}
+ggplot(data, aes(x = midterm, y = final_exam)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  # highlight the OLS logic graphically
+  geom_segment(
+    aes(
+      x = midterm,
+      y = final_exam,
+      xend = midterm,
+      yend = predict(model),
+      color = "red",
+      alpha = 0.5,
+    )) +
+  labs(title = "Relationship between Midterm and Final Exam Scores",
+       x = "Midterm Scores",
+       y = "Final Exam Scores") +
+  guides(color = FALSE, alpha = FALSE) +
+  theme_minimal()
+```
+
+
+
+## The `broom` package (OPTIONAL!)
+The broom package in R is designed to bridge the gap between R's statistical output and tidy data. [^session1-2]  It takes the output of various R statistical functions and turns them into tidy data frames. This is particularly useful because many of R's modeling functions return outputs that are not immediately suitable for further data analysis or visualization within the tidyverse framework. 
+
+[^session1-2]: As a quick reminder these three principles are guiding when we speak of tidy data: 1) Every column is a variable, 2) Every row is an observation, 3) Every cell is a single value.
+
+![](images/logo.png){fig-align="center" width=30%}
+
+
+### Nesting  with `nest()` {#nesting}
+Nesting in the context of the `broom` package usually refers to the idea of creating a list-column in a data frame (or even better a tibble) where each element of this list-column is itself a data frame (again, even better a tibble) or a model object. In a complex analysis, you might fit separate models to different subsets of data. Nesting allows you to store each of these models (or their broom-tidied summaries that we will see in the next three sub-sections) within a single, larger data frame (for the third time, the best is to do this with a tibble) for easier manipulation and analysis. For questions on what tibbles are see the below section on [tibbles](#tibble). 
+
+Let's go back to the midterm data which I have used before and randomly assign students into two classes (Class A or Class B) pretending that two different classes of students had taken the exams. I will then later on nest the data by class so that you can understand the logic of nesting.
+
+```{r}
+data <- data |> 
+  mutate(class = sample(c("A", "B"), size = nrow(data), replace = TRUE))
+```
+
+Now I will group my observations by class using `group_by()` and then nest them within these groups. The output will only contain two rows, class A and class B, and each row will contain a tibble with the observations of the respective class. 
+
+```{r}
+data |> 
+  group_by(class) |>
+  nest()
+```
+
+That is a very simple application of a nesting process. You can `group_by()` and `nest()` by many different variables. You might want to nest your observations per year or within countries. You can also nest by multiple variables at the same time. We will see this idea again in the next session when we will talk about the `purrr` package and how to [automatically run regressions](../session2/session2.html#automatic-regressions-for-several-countries) for several countries at the same time
+
+
+
+### Model estimates with `tidy()`
+The `tidy()` function takes statistical output ofa model and turns it into a tidy tibble. This means each row is an observation (e.g., a coefficient in a regression output) and each column is a variable (e.g., estimate, standard error, statistic). For instance, after fitting a linear model, you can use `tidy()` to create a data frame where each row represents a coefficient, with columns for estimates, standard errors, t-values, and p-values.
+
+### Key metrics with `glance()`
+`glance()` provides a one-row summary of a model's information. It captures key metrics that describe the overall quality or performance of a model, like $R^2$, AIC, BIC in the context of linear models. This is useful for getting a quick overview of a model's performance metrics.
+
+### Residuals with `augment()`
+The `augment()` function adds information about individual observations to  the original data, such as fitted values or residuals in a regression model. You want to do this when you are evaluating a model fit at the observation level, checking for outliers, or understanding the influence of individual data points. We will talk more about model diagnostics in the next session!
+
+Let's take a look at how this would work out in practice. For simplicity sake, we will set the `nest()` logic aside for a second and only look at the `tidy()`, `glance()`, and `augment()` functions. 
+
+Here I only build the same model that we have already seen above: 
+
+```{r}
+model <- lm(final_exam ~ midterm, data = data)
+
+```
+
+
+```{r}
+tidy(model)
+```
+
+Now let's glance the hell out of the model: 
+
+```{r}
+glance(model)
+```
+Don't worry about what these things might mean for now, AIC and BIC will for example come up again next session. 
+
+
+### What is a tibble? {#tibble}
+
+```{=html}
+<style>body {text-align: justify}</style>
+```

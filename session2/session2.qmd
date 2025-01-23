@@ -1,0 +1,799 @@
+---
+title: "Logistic Regressions"
+author: "Luis Sattelmayer"
+---
+
+## Introduction
+
+You have seen the logic of Logistic Regressions with Professor Rovny in the lecture. In this lab session, we will understand how to apply this logic to R and how to build a model, interpret and visualize its results and how to run some diagnostics on your models. 
+If the time allows it, I will also show you how automatize the construction of your model and run several logistic regressions for many countries at once.
+
+These are the main points of today's session and script: 
+
+1. Getting used to the European Social Survey
+2. Cleaning data: dropping rows, columns, creating and mutating variables
+3. Building a generalized linear model (`glm()`); special focus on logit/probit
+4. Extracting and interpreting the coefficients
+5. Visualization of results
+6. Introduction to the `purrr` package and automation in RStudio (OPTIONAL!)
+
+## Data Management & Data Cleaning
+As I have mentioned last session, I will try to gradually increase the data cleaning part. It is integral to R and operationalizing our quantitative questions in models. A properly cleaned data set is worth a lot. This time we will work on how to drop values of variables (and thus rows of our dataset) which we are either not interested in or, most importantly, because they skew our estimations. 
+
+
+
+```{r}
+# these are the packages, I will need for this session 
+library(tidyverse)
+```
+
+
+
+## Importing the data
+We have seen how to import a dataset. Create an `.Rproj` of your choice and create a folder in which the dataset of this lecture resides. You can download this dataset from our Moodle page. I have pre-cleaned it a bit. If you were to download this wave of the European Social Survey from the Internet, it would be a much bigger data set. I encourage you to do this and try to figure out ways to manipulate your data but for now, we'll stick to the slightly cleaner version.
+
+```{r}
+# importing the data; if you are unfamiliar with this operator |> , ask me or
+# go to my document "Recap of RStudio" which you can find on Moodle
+ess <- read_csv("ESS_10_fr.csv")
+```
+
+As you can see from the dataset's name, we are going to work with the *European Social Survey*. It is the biggest, most comprehensive and perhaps also most important survey on social and political life in the European Union. It comes in waves of two years and all the European states which want to pay for it produce their own data. In fact, the French surveys (of which we are going to use the most recent, 10th wave) are produced at SciencesPo, at the Centre de Données Socio-Politiques (CDSP)!
+
+The ESS is extremely versatile if you need a broad and comprehensive data set for both national politics in Europe or to compare European countries. Learning how to use it, how to manage and clean the ESS waves will give you all the instruments to work with almost any data set that is "out there". Also, some of you might want to use the ESS waves for your theses or research papers. There is a lot that can be done with it, not only cross-sectionally but also over time. So give it a try :)
+
+Enough advertisement for the ESS, let's get back to wrangling with our data! As always, the first step is to inspect ("glimpse") at our data and the data frame's structure. We do this to see if obvious issues arise at a first glance. 
+
+```{r}
+glimpse(ess)
+```
+
+As we can see, there are many many variables (25 columns) with many many observations (33351). Some are quite straight-forward and the name is clear ("essround", "age") and some much less. Sometimes we can guess the meaning of a variable's name. But most of the time -- either because guessing is too annoying or because the abbreviation is not making any sense -- we need to turn to the documentation of the data set. You can find the documentation of this specific version of the data set in an html-file on Moodle (session 2).
+
+Every (good and serious) data set has some sort of documentation somewhere. If not, it is not a good data set and I am even tempted to say that we should be careful in using it! The documentation for data sets is called a *code book*. Code books are sometimes well crafted documents and sometimes just terrible to read. In this class, you will be exposed to both kinds of code books in order to familiarize you with both.
+
+In fact, this dataframe still contains many variables which we either won't need later on or that are simply without any information. Let's get rid of these first. This is a step which you can also do later on but I believe that it is smart to this right at the beginning in order to have a neat and tidy data set from the very beginning.
+
+You can select variables (`select()`) right at the beginning when importing the csv file.
+
+```{r}
+ess <- read_csv("ESS_10_fr.csv")  |>
+  dplyr::select(
+    cntry,
+    polintr,
+    trstplt,
+    trstprt,
+    vote,
+    prtvtefr,
+    clsprty,
+    gndr,
+    yrbrn,
+    eduyrs,
+    emplrel,
+    uemp12m,
+    uemp5yr
+  )
+```
+
+However, I am realizing that when looking at the number of rows that my file is a bit too large for only one wave and only one country. By inspecting the `ess$cntry` variable, I can see that I made a mistake while downloading the dataset because it contains *all* countries of wave 10 instead of just one. We can fix this really easily when importing the dataset: 
+
+```{r}
+ess <- read_csv("ESS_10_fr.csv") |>
+  dplyr::select(
+    cntry,
+    polintr,
+    trstplt,
+    trstprt,
+    vote,
+    prtvtefr,
+    clsprty,
+    gndr,
+    yrbrn,
+    eduyrs,
+    emplrel,
+    uemp12m,
+    uemp5yr
+  ) |>
+  filter(cntry != "FR")
+```
+
+This only leaves us with the values for France!
+
+
+#### Cleaning our DV
+At this point, you should all check out the codebook of this data set and take a look at what the values mean. If we take the variable of `ess$vote` for example, we can see that there are many numeric values of which we can make hardly any sense (without guessing and we don't do this over here) of what they might stand for.
+
+```{r}
+summary(ess$vote) 
+# remember that you can summary() both dataframes and individual variables
+```
+
+Or in a table containing the amount of times that a value was given: 
+```{r}
+table(ess$vote)
+```
+Here we can see that the variable vote contains the numeric values of 1 to 3 and then 7, 8, and 9. If we take a look at the code book, we can see what they stand for: 
+
+- 1 = yes (meaning that the respondent voted)
+- 2 = no (meaning that the respondent did **not** vote)
+- 3 = not eligible to vote
+- 7	= Refusal
+- 8 = Don't know
+- 9 = No answer
+
+The meaning behind the values of 7, 8, and 9 are quite common and you will find them in almost all data sets which were made out of surveys. Respondents might not want to give an answer, the answer was not able to be read, or they indicated that they did not remember. 
+
+**Spoiler alert: We will work on voter turnout this session**: Therefore, we will try to see what makes people vote and what decreases the likelihood that they vote at election day. The question of our dependent variable will thus be: *Has the respondent voted or not?*. Mathematically, this question cannot be answered with a linear regression which uses the OLS method as the dependent variable is *binary* meaning that 0 = has not voted/1 = has voted. There is only two possible outcomes and the variable is not continuous (one of the assumptions of an OLS). 
+
+But if we were to use the variable on voting turnout as it is right now, we would neither have a binary variable nor have a reliable variable as it contains values in which we are both not interested in and that will skew our estimations strongly. In fact, we cannot do a logistic regression (logit) on variables other than binary. 
+
+Thus, we first need to transform our dependent variable. We need to get rid of unwanted values and transform the 1s and 2s in 0s and 1s.
+
+First we will get rid of the unwanted values in which we are not interested. 
+
+```{r}
+# dplyr
+ess <- ess |>
+  filter(!vote %in% c(3, 7, 8))
+```
+
+Here are two other ways to do it:
+```{r, eval = FALSE}
+# this one would be in base R
+ess[!vote %in% c(3, 7, 8, 9)]
+
+# using the subset() function, this returns a logical vector which elements of
+# vote are not in the set of values 3, 7, 8, or 9
+ess <- subset(ess, vote %in% c(3,7,8,9) == F) 
+
+# Alternatively you can use the %in% function with ! operator as well like this:
+ess <- subset(ess, !vote %in% c(3,7,8,9))
+```
+
+Quick check to see if we got rid of all the values:
+
+```{r}
+table(ess$vote)
+```
+Perfect, now we just need to transform the ones and twos into zeros and ones. This is both out of convention and also to torture you with some more data management. Since we are interested in people who do **not** vote, we will code those people as 0 and those who **did** vote as 1.
+
+```{r}
+ess <- ess |> 
+  mutate(vote = ifelse(vote == 1, 1, 0))
+```
+The mutate() function is not perfectly intuitive at first sight. Here, I use the `ifelse()` function within `mutate()` to check if vote is equal to 1, if it is then it will remain 1 and if not it will be replaced by 0.
+
+
+In Base R, you could do it like this but I believe that the `mutate()` function is probably the most elegant way of doing things... It's up to you though:
+```{r, eval = FALSE}
+# only use the ifelse() function
+ess$vote <- ifelse(ess$vote == 1, 1, 0)
+
+# This will leave the value of 1 at 1 and change 2 to 0 for the column vote.
+ess$vote[ess$vote == 1] <- 1
+ess$vote[ess$vote == 2] <- 0
+```
+
+
+
+We are *this* close to having finished our data management part and to being able to finally work on our model. But we still have many many variables which are as "untidy" as our initial dependent variable was. Lastly, and I promise that this is the last data wrangling part for today and that we will get to our model in a moment, we need to check in the code book if specific values that we cannot simply replace over the whole data frame are still void of interest. 
+
+Our independent variables of interest: 
+
+1. political interest (polintr): `c(7:9)` needs to be dropped
+2. trust in politicians (trstplt): no recoding necessary (unwanted values already NAs)
+3. trust in political parties (trstprt): already done
+4. feeling close to a party (clsprty): transform 1/2 into 0/1, drop `c(7:8)`
+5. gender (gndr): transform into 0/1 and drop the no answers
+6. year born (yrbrn): already done
+7. years of full-time education completed (eduyrs): already done
+
+
+We will do every single step at once now using the pipes `%>%` (`tidyverse`) or `|>` (Base R) to have a tidy and elegant way of doing everything at once. 
+
+Below you can see that I first `filter()` out the unwanted values of our dependent variable. Then open up a `muatate()` in which I manipulate the independent variables which we are going to need for our model. Note how you can separate the different manipulations with a comma within the same function. This renders a very clean and easy to read code. There are several different ways you could do this. The `recode()`, `if_else()` and `case_when()` functions are all very useful for this kind of data wrangling. For clarity, I will use `case_when()` here. There is a newer version of this function called `case_match()` but it is only a couple of months old and for now the documentation of `case_when()` will probably be more helpful.
+
+`case_when()` evaluates a series of conditions and applies the corresponding transformation to each element of a vector or column in a dataset. It's like a more flexible and vectorized version of the if...else statement, allowing for multiple if...else conditions to be checked in a single function call. This is how it reads: 
+
+```{r}
+#| eval: false
+case_when(
+  condition1 ~ value_if_true1,
+  condition2 ~ value_if_true2,
+  TRUE ~ default_value
+)
+```
+
+With `case_when()`, you list your rules one by one. For each rule, you start with a condition (like "score is 80 or above"), followed by a `~`, and then what you want to happen if that condition is true (like "they get an 'A'"). After listing all your specific rules, you end with a special catch-all rule: `TRUE ~ x`. This is like saying, "For anyone else, or any situation I didn't mention, do this." This `TRUE ~ x` part is crucial. It ensures that if none of the specific conditions match (maybe because of some unexpected situation), you have a default action ready. It's your "in case of anything else" rule.
+
+Now, let's talk about `NA_integer_`. In R, NA means "not available" or missing information. But R is very particular about the kind of data it deals with. If your variable is numeric, R wants to know that even your missing pieces should be numbers. Using `NA_integer_`is your way of telling R, "This is a missing piece of information, but if it were here, it would be a number." It helps keep everything organized and avoids confusion when R is looking through your data. There are also other instances (when recoding character strings for example), where you would use `NA_character_` instead. Pay attention that if you have numeric values with decimal points, you will have to use `NA_real_` instead of `NA_integer_`.
+
+
+```{r}
+ess_final <- ess |> 
+  # Filtering the dependent variable to get rid of any unnecessary rows
+  filter(!vote %in% c(3, 7, 8, 9)) |> 
+mutate(
+    # Recode 'polintr' to drop values 7 to 9
+    polintr = case_when(
+      polintr %in% 7:9 ~ NA_integer_,
+      TRUE ~ polintr
+    ),
+    # Recode 'clsprty' 1/2 into 0/1 and drop 7, 8
+    clsprty = case_when(
+      clsprty == 1 ~ 0,
+      clsprty == 2 ~ 1,
+      clsprty %in% c(7, 8) ~ NA_integer_,
+      TRUE ~ clsprty
+    ),
+    # Recode 'gndr' into 0/1 and handle other cases as NAs
+    gndr = case_when(
+      gndr == 1 ~ 0,
+      gndr == 2 ~ 1,
+      TRUE ~ NA_integer_
+    ),
+    # Recode 'vote' as binary 1 (voted) & 0 (abstention)
+    vote = case_when(
+      vote == 1 ~ 1,
+      TRUE ~ 0
+    )
+  )
+```
+
+
+#### Optional quick/fancy data cleaning
+Edit: I have added a more sophisticated way of cleaning all your variables in one go. I have realized during the first session of session 2 that this might be too overwhelming but I would still like to keep this way of doing things to show you how you can do it in the future. If you wish to stick to the slightly longer but maybe also clearer way above, that is absolutely fine with me! Chose the way that you understand and feel comfortable with. As always, there are a lot of different paths to the same goal in R!
+
+
+```{r}
+#| eval: false
+# specify a string of numbers we are absolutely certain we won't need
+unwanted_numbers <- c(66, 77, 88, 99, 7777, 8888, 9999)
+
+# make sure to create a new object/data frame; if you don't and re-run your code
+# a second time, it will transform some mutated values again!
+ess_final <- ess |> 
+  # filtering the dependent variable to get rid of any unnecessary rows
+  filter(!vote %in% c(3, 7, 8, 9)) |> 
+  # mutate allows us to transform values within variables into other 
+  # values or NAs
+  # vote as binary 1 (voted) & 0 (abstention)
+  mutate(across(c(polintr, clsprty), ~replace(., . %in% c(7:9), NA)),
+         across(everything(), ~replace(., . %in% unwanted_numbers, NA)),
+         vote = ifelse(vote == 1, 1, 0),
+         # recode the variable to 0 and 1
+         clsprty = recode(clsprty, `1` = 1, `2` = 0),
+         # same for gender
+         gndr = recode(gndr, `1` = 0, `2` = 1))
+```
+
+
+
+### Constructing the logit-model
+If you have made it this far and still bear with me, you have made it to the fun part! Specifying the model and running it, literally only takes one line of code (or two depending on the amount of independent variables). And as you can see, it is really straightforward. The `glm()` function stands for *generalized linear model* and comes with Base R. 
+
+In Professor Rovny's lecture, we have seen that for a Maximum Likelihood Estimation (MLE) you need to know or have an assumption about the distribution of your dependent variable. And according to this distribution, you need to find the right linear model. If you have a binary outcome, your distribution is *binomial*. Within the function, we thus specify the family of the distribution as such. Note that you could also specify other families such as *Gaussian*, *poisson*, *gamma* or many more. We are not going to touch further on that but the `glm()` function is quite powerful. We can specify, within the `family = ` argument, that we are doing a logistic regression. This can be done by adding `link = logit` to the argument. If ever you wanted to be precise and call a *probit* or *cauchy* link, it is here that you can specify this. The standard, however, is set to *logit*, so we would technically not be forced to specify it in this case.
+
+In terms of the model we are building right now, it follows the idea that voting behavior (voted/not-voted) is a function of political interest, trust in politicians, trust in parties, feeling close to a specific party, as well as usual control variables such as gender, age, and education: 
+
+By no means is this regression just extensive enough to be published. It is just one example in which I suspect that political interest, trust in politics and politicians, and party affiliation are explanatory factors.
+
+```{r}
+logit <- glm(
+  vote ~ polintr + trstplt + trstprt + clsprty + gndr +
+    yrbrn + eduyrs,
+  data = ess_final,
+  family = binomial(link = logit)
+)
+```
+
+
+The object called `logit` contains our model with its coefficients, confidence intervals and many more things that we will play with! But as you can see, the actual construction of the model is more than simple...
+
+```{r}
+library(broom)
+tidy(logit)
+```
+
+You have seen both the `broom` package as well as `stargazer` in the last session.
+
+```{r}
+stargazer::stargazer(
+  logit,
+  type = "text",
+  dep.var.labels = "Voting Behavior",
+  dep.var.caption = c("Voting turnout; 0 = abstention | 1 = voted"),
+  covariate.labels = c(
+    "Political Interest",
+    "Trust in Politicians",
+    "Trust in Parties",
+    "Feeling Close to a Party",
+    "Gender",
+    "Year of Birth",
+    "Education"
+  )
+)
+
+```
+
+
+### Interpretation of a logistic regression
+Interpreting the results of a logistic regression can be a bit tricky because the predictions are in the form of probabilities, rather than actual outcomes. This sounds quite abstract and you are right, it is abstract. However, with a proper understanding of the coefficients and odds ratios, you can gain insights into the relationship between your independent variables and the binary outcome variable even without transforming your coefficients into more easily intelligible values.
+
+First the really boring and technical definition: The coefficients of a logistic regression model represent the change in the *log-odds* of the outcome for a *one-unit change* in the predictor variable (holding all other predictors constant). The sign of the coefficient indicates the direction of the association: positive coefficients indicate that as the predictor variable increases, the odds of the outcome also increase, while negative coefficients indicate that as the predictor variable increases, the odds of the outcome decrease.
+
+The odds ratio, which can be calculated from the coefficients and we will see how that works in a second (exponentation is the key word), represents the ratio of the odds of the outcome for a particular value of the predictor variable compared to the odds of the outcome for a reference value of the predictor variable. An odds ratio greater than 1 indicates that the predictor variable is positively associated with the outcome, while an odds ratio less than 1 indicates that the predictor variable is negatively associated with the outcome.
+
+It's also important to keep in mind that a logistic regression model makes assumptions about the linearity, independence and homoscedasticity of the data, if these assumptions are not met it can affect the model's performance and interpretation. We will see the diagnostics of logistic regression models again next session.
+
+Is this really dense and did I lose you? It is dense but I hope you bear with me because we will see that it becomes much clearer once we apply this theory to our model but also once we exponentiate the coefficients (reversing the logarithm so to speak) and interpret them as odds-ratios.
+
+But from a first glimpse at our model summary we can see that political interest, trust in politicians, closeness to a party, age and education are all statistically significant, meaning that their p-value is <.05! I will not regard any other variable that is not statistically significant as you do not usually interpret non-significant variables. 
+
+Next, we can already say that the association of interest, closeness to party and age with voting behavior is negative. This is quite logical and makes sense in our case. If we look at the scales on which these variables are coded (code book!), we can see that the higher the value of the variable, the less interested, close or aged the respondents were. Thus, it decreases their likelihood to vote on voting day. Trust in politicians is coded the other way around. If I had been a little more thorough, it would have been good to put each independent variable on the same scale... But it means that trust in politicians (in fact meaning that they trust them less) raises the likelihood of not voting somehow (positive association). 
+
+#### Odds-ratio
+If you exponentiate the coefficients of your model, you can interpret them as odds-ratios. Odds ratios (ORs) are often used in logistic regression to describe the relationship between a predictor variable and the outcome. ORs are easier to interpret than the coefficients of a logistic regression because they provide a measure of the change in the odds of the outcome for a unit change in the predictor variable.
+
+An OR greater than 1 indicates that an increase in the predictor variable is associated with an increase in the odds of the outcome, and an OR less than 1 indicates that an increase in the predictor variable is associated with a decrease in the odds of the outcome.
+
+The OR can also be used to compare the odds of the outcome for different levels of the predictor variable. For example, an OR of 2 for a predictor variable means that the odds of the outcome are twice as high for one level of the predictor variable compared to another level. Therefore, odds ratios are often preferred to coefficients for interpreting the results of a logistic regression, especially in applied settings.
+
+I will try to rephrase this and make it more accessible so that odds-ratios maybe become more intelligible (they are really nasty statistical stuff): 
+
+Imagine you're playing a game where you have to guess whether a coin will land on heads or tails. If the odds of the coin landing on heads is the same as the odds of it landing on tails, then the odds-ratio would be 1. This means that the chances of getting heads or tails are the same. But if the odds of getting heads is higher than the odds of getting tails, then the odds-ratio would be greater than 1. This means that the chances of getting heads is higher than the chances of getting tails. On the other hand, if the odds of getting tails is higher than the odds of getting heads, then the odds-ratio would be less than 1. This means that the chances of getting tails is higher than the chances of getting heads.  In logistic regression, odds-ratio is used to understand the relationship between a predictor variable (let's say "X") and an outcome variable (let's say "Y"). Odds ratio tells you how much the odds of Y happening change when X changes.
+
+So, for example, if the odds ratio of X is 2, that means that if X happens, the odds of Y happening are twice as high as when X doesn't happen. And if the odds ratio of X is 0.5, that means that if X happens, the odds of Y happening are half as high as when X doesn't happen.
+
+```{r}
+# simply use exp() on the coefficients of the logit
+exp(coef(logit))
+
+# here would be a second way of doing it
+exp(logit$coefficients)
+```
+
+We can also, and should, add the 95% confidence intervals (CI). As a quick reminder, the CI is a range of values that is likely to contain the true value of a parameter (the coefficients of our predictor variables in our case). This comes at a certain level of confidence. The most commonly used levels (attention, this is only a statistical convention!) of confidence are 95% and sometimes 99%. 
+
+A 95% CI for a parameter, for example, means that if the logistic regression model were fitted to many different samples of data, the true value of the parameter would fall within the calculated CI for 95% of those samples.
+
+```{r}
+# most of the times the extra step in the next lines is not necessary and this 
+# line of code is enough
+exp(cbind(OR = coef(logit), confint(logit)))
+    
+# here, however, we must combine both the exponentiate coefficients with the 95% confidence intervals
+# the format() function, helps me to show the numbers without the exponentiated 
+# "e" and without scientific notation; the round() function within this function gives me values which are rounded on the 5th decimal place.
+format(round(exp(cbind(
+  OR = coef(logit), confint(logit)
+)), 5),
+scientific = FALSE, digits = 4)
+```
+This exponentiated value, the **odds ratio** (OR), now allows us to say that for a one unit increase in political interest, for example, the odds of voting (versus not voting) decrease. The same goes for the other variables. 
+
+The last thing about odds-ratio and I hope that this is the easiest to interpret, is when you try to make percentages out of it: 
+
+```{r}
+# the [-1] drops the value of the intercept as it is statistically meaningless
+# we put another minus one to get rid of 1 as a threshold for interpreting the
+# odds-ratio
+# we multiply by 100 to have percentages
+100*(exp(logit$coefficients[-1])-1)
+```
+
+This allows us to say that being politically uninterested decreases the *odds* of voting by 35%. Much more straightforward right?
+
+#### Predicted Probabilities
+Predicted probabilities also allow us to understand our logistic regression. In logistic regressions, the predicted probabilities and ORs are two different ways of describing the relationship between the predictor variables and the outcome. Predicted probabilities refer to the probability that a specific outcome will occur, given a set of predictor variables. They are calculated using the logistic function, which maps the linear combination of predictor variables (also known as the log-odds) to a value between 0 and 1.
+
+The importance here is that we chose the predictor variables and at which values of those we are trying to predict the outcome. This is what we call "holding independent variables constant" while we calculate the predicted probability for a specific independent variable of interest. 
+
+I will repeat this to make sure that everybody can follow along. With the predicted probabilities, we are trying to make out the effect of one specific variable of interest on our dependent variable, while we hold every other variable at their mean, median in some cases or, in the case of a dummy variable, at one of the two possible values. By holding them constant, we can be sure to see the singular effect of our independent variable of interest.
+
+In our case, let "feeling close to a party" (1 = yes; 0 = no) be our independent variable of interest. We take our old `ess_final` dataframe and create a new one. In the `newdata` dataframe, we hold all values at their respective means or put our binary/dummy variables to 1. It is an arbitrary choice to put it to one here. We could also put it to 0. The only variable that we allow to alternate freely to find the predicted probabilities is our variable of interest `clsprty`.
+
+```{r}
+# creating the new dataframe newdata with the old dataframe ess_final
+newdata <- with(
+  # the initial dataframe contains NAs, we must get rid of them!
+  na.omit(ess_final),
+  # construct a new dataframe
+  data.frame(
+    # hold political interest at its mean
+    polintr = mean(polintr),
+    # hold trust in politicians at its mean
+    trstplt = mean(trstplt),
+    # hold trust in parties at its mean
+    trstprt = mean(trstprt),
+    # let it vary on our IV of interest
+    clsprty = c(0, 1),
+    # gender is set to 1
+    gndr = 1,
+    # mean of age
+    yrbrn = mean(yrbrn),
+    # mean of education
+    eduyrs = mean(eduyrs)
+    ))
+
+```
+
+If that all worked out, we can predict the values for this specific independent variable by using the Base R `predict()` function:
+
+```{r}
+newdata$preds <- predict(logit, newdata = newdata, type = "response")
+```
+
+Now, let's plot the values:
+```{r, error = TRUE}
+
+ggplot(newdata, aes(x = clsprty, y = preds)) +
+  geom_line() +
+  ylab("Likelihood of Voting") + xlab("Feeling Close to a Party")
+```
+
+
+We can also do the same thing to see the predicted probability of political interest on voting behavior. This is a bit more interesting as the variable is not binary like `ess$clsprty`:
+
+```{r}
+# creating the new dataframe newdata with the old dataframe ess_final
+newdata_1 <- with(
+  # the initial dataframe contains NAs, we must get rid of them!
+  na.omit(ess_final),
+  # construct a new dataframe
+  data.frame(
+    # hold political interest at its mean
+    polintr = c(1:4),
+    # hold trust in politicians at its mean
+    trstplt = mean(trstplt),
+    # hold trust in parties at its mean
+    trstprt = mean(trstprt),
+    # let it vary on our IV of interest
+    clsprty = 1,
+    # gender is set to 1
+    gndr = 1,
+    # mean of age
+    yrbrn = mean(yrbrn),
+    # mean of education
+    eduyrs = mean(eduyrs)
+  )
+)
+```
+
+```{r}
+newdata_1$preds <- predict(logit, newdata = newdata_1, type = "response")
+```
+
+Now, let's plot the values:
+```{r}
+ggplot(newdata_1, aes(x = polintr, y = preds)) +
+  geom_line() +
+  ylab("predicted probability") + xlab("political interest")
+
+```
+
+
+```{r}
+#combines value data frame created above with predicted probabilities evaluated 
+# at the data values
+newdata_1 <-
+  cbind(newdata_1,
+        predict(
+          logit,
+          newdata = newdata_1,
+          type = "link",
+          se = TRUE
+        )) 
+```
+
+
+```{r}
+newdata_1 <- within(newdata_1, {
+  pp <- plogis(fit)                   # predicted probability
+  lb <- plogis(fit - (1.96 * se.fit)) # builds lower bound of CI
+  ub <- plogis(fit + (1.96 * se.fit)) # builds upper bound of CI
+})
+```
+
+
+```{r}
+ggplot(newdata_1, aes(x = polintr, y = pp)) +
+  geom_line(aes(x = polintr, y = pp, color = as.factor(gndr))) +
+  geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.3) +
+  theme(legend.position = "none") +
+  ylab("predicted probability to abstain from voting") +
+  xlab("political interest")
+```
+
+
+
+
+
+
+### Making life easiest
+You are going to hate me if I tell you that all these steps which we just computed by hand... can be done by using a package. This is only 0.01% of me trying to be mean but mostly because it is extremely helpful and **necessary** to understand what is going on under the hood of *predicted probabilities*. The interpretation of logistic regressions is tricky and if you do not know what you are computing, it is even more complicated. 
+
+Working with packages is great, and I am aware that I always encourage you to use packages that make your life easier. **But** and this is an important "but" we do not always understand what is going on under the hood of a package. It is like putting your logistic regression into a black box, shaking it really well, and then taking a look at the output and putting it on shaky interpretational terms. 
+
+But enough of personal defense, as to why I made you suffer through all this. Here is my code to do most of the steps at once:
+
+```{r}
+# this package contains everything we need craft predicted probabilities and
+# visualize them as well
+library(ggeffects)
+
+# like the predcit() function of Base R, we use ggpredict() and specify
+# our variable of interest
+df <- ggpredict(logit, terms = "polintr")
+
+# this is the simplest way of plotting this
+ggplot(df, aes(x = x, y = predicted)) +
+  # our graph is more or less a line, so geom_line() applies
+  geom_line() +
+  # geom_ribbon() with the values that ggpredict() provided for the confidence
+  # intervals then gives
+  # us a shade around the geom_()line as CIs
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)
+
+```
+
+And voilà, your output it less than 10 lines of code.
+
+
+
+
+
+
+## Automating things in R (OPTIONAL!)
+When programming, it usually takes time to understand and apply things. The next step should often be to think about how to automate something in order to make processes faster and more elegant. Once we have understood a process relatively well, we can apply it to other areas in an automated way relatively easily. 
+
+
+For example, let's think about our logistical regressions today. We worked with the ESS and looked at the 10th round of the data set for France. Our model aimed to investigate which variables can predict abstention. But I can also ask myself this question over a certain period of time, i.e. over several waves of the ESS, or for several countries. If I now tell you that you should do the logit for all countries of the ESS, the first step would be to run my code for n = countries of the ESS. However, this would result in a very long script, would not be very elegant and the longer the code, the higher the probability of errors.
+
+
+If you are programming and realize that you have to do the same steps several times and it is actually the same step, only that a few parameters (such as the names of variables) change, then you can be sure that this could also be automated. At a certain point in programming, the goal should always be to create a pipeline for the work steps, which has the goal of making our code run as automatically as possible. 
+
+In RStudio we have several ways to automate this. For example, you can write so-called for-loops, which perform certain operations one after the other for certain list entries. Or you can write your own functions. At some point, someone decided to write the function `glimpse()` or `read_csv2()`, for example. As private users of R, we can do the same. In this way, we can, for example, accommodate several operations within a function that we write ourselves, which can then be applied simultaneously to several objects or a data set with different countries.
+
+
+
+I am aware that this is only the second session and that may sound like a lot. Everything from here on is **optional**, but I think it's important that you see this as early as possible. Some of you may already feel comfortable enough to try something like this out for yourselves. If you don't, that's okay too. You will get there, trust me! I just want to show you what is possible and what you can do with R.
+
+![](images/Drake_meme.jpeg){fig-align="center"}
+
+
+### Writing your function
+Functions in R are incredibly powerful and essential for efficient and automated programming. A function in R is defined using the function keyword. The basic structure includes the name of the function, a set of parameters, and the body where the actual computations are performed.
+
+The basic syntax is as follows:
+
+There are some minor conventions in RStudio when writing functions. Some of them also apply to other parts than just functions. 
+
+1. You should give them some "breathing" space. When you write the accolades, put a space bar in between.
+
+```{r}
+#| eval: false
+# this is bad
+function(x){
+  x + 1
+}
+```
+
+```{r}
+#| eval: false
+
+# this is good
+function(x) {
+  x + 1
+}
+```
+
+2. You should always put a space between the equal sign and the value you assign to a variable. Place spaces around *all infix operators* (=, +, -, <-, etc.)
+
+```{r}
+#| eval: false
+
+# this is bad
+data<-read.csv("data.csv")
+```
+
+```{r}
+#| eval: false
+data <- read.csv("data.csv")
+```
+
+
+3. “stretch” your code when possible `ctrl + shift + a` can be of help for that
+
+```{r}
+#| eval: false
+
+# this is bad but in a longer example
+country_model <- function(df) {glm(vote ~ polintr + trstplt + trstprt + clsprty + gndr + yrbrn + eduyrs, family = binomial(link = "logit"), data = df)
+}
+```
+
+```{r}
+#| eval: false
+# this is better
+country_model <- function(df) {
+  glm(
+    vote ~ polintr + trstplt + trstprt + clsprty + gndr + yrbrn + eduyrs,
+    family = binomial(link = "logit"),
+    data = df
+  )
+}
+```
+
+4. We usually assign verbs to functions. This means that the name of the function should be a verb that describes what the function does. If we want to create a function that reads the ESS files and does several operations at once, we should call it something like `read_ess()`.
+
+
+### The `purrr` package
+The `purrr` package in R is a powerful tool that helps in handling repetitive tasks more efficiently. It's part of the Tidyverse, a collection of R packages designed to make data science faster, easier, and more fun!
+
+In simple terms, `purrr` improves the way you work with lists and vectors in R. It provides functions that allow you to perform operations, i.e. pre-existing functions or functions you will write yourselves, on each element of a list or vector without writing explicit loops. This concept is known as *functional programming*. 
+
+::: {.callout-caution collapse="true" title="Why use `purrr` instead of for-loops?"}
+1. Simplifies Code: `purrr` makes your code cleaner and more readable. Instead of writing several lines of loop code, you can achieve the same with a single line using purrr.
+
+2. Consistency and Safety: `purrr` functions are consistent in their behavior, which reduces the chances of errors that are common in for loops, like mistakenly altering variables outside the loop.
+
+3. Handles Complexity Well: When working with complex or nested lists, `purrr` offers tools that make these tasks much simpler compared to traditional loops.
+
+4. Integration with `tidyverse`: Since `purrr` is part of the `tidyverse`, it integrates smoothly with other Tidyverse packages, making your entire data analysis workflow more efficient.
+:::
+
+Put simply, we can use the functions of the `purrr` package to apply a function to each element of a list or vector. Depending on the specific `purrr`-function, our output can be different but we can also specify the output in our manually written function which we feed into `purrr`. 
+
+### The `map()` function
+The map() function, part of the purrr package in R, is built around a simple yet powerful concept: applying a function to each element of a list or vector and returning a new list with the results. This concept is known as "mapping," hence the name `map()`.
+
+
+![The logic is simple. You take map(a list of your choice + your function) which then creates an output that behaves as if you had applied that function to each list entry individually.](images/map-arg.png)
+
+
+Here's a breakdown of the logic behind `map()`:
+
+1. Input: The primary input to `map()` is a list or a vector. This could be a list of numbers, characters, other vectors, or even more complex objects like data frames.
+
+2. Function Application: You specify a function that you want to apply to each element of the list. This function could be a predefined function in R, or a custom function you've written. The key is that this function will be applied individually to each element of your list/vector.
+
+3. Iteration: `map()` internally iterates over each element of your input list/vector. You don't need to write a loop for this; `map()` handles it for you. For each element, `map()` calls the function you specified.
+
+4. Output: For each element of the list/vector, the function's result is stored. `map()` then returns a new list where each element is the result of applying the function to the corresponding element of the input.
+
+5. Flexibility in Output Type: The purrr package provides variations of `map()` to handle different types of output. For example, `map_dbl()` if your function returns doubles, `map_chr()` for character output, and so on. This helps in ensuring that the output is in the format you expect.
+
+
+### Automatic regressions for several countries {#automatic-regressions-for-several-countries}
+
+
+This is absolutely only **optional**. I do not ask you to reproduce anything of this at any point in this class. I simply wanted to show you what you can do in R and what I mean when I say that automating stuff *makes life easier*. 
+
+I present you here with a code that does the logistic regression we have been doing but on all countries of the ESS at the same time and then plots us the odds-ratio of our variable of interest "political interest", as well as comparing McFadden pseudo R2 (we'll see this term next session again).
+
+I will combine things from the optional section of Session 1 and the `purrr` package to do this. The idea is to build one model per country of the ESS, `nest()` it in a new tibble ([What are tibbles again?](https://r4ds.had.co.nz/tibbles.html)) [^2] where each row contains the information necessary for one country-model and to then use `map()` to apply the function `tidy()` from the `broom` package to each of these models. 
+
+[^2]: The quick answer is that tibbles are a modern take on data frames in R, offering improved printing (showing only the first 10 rows and fitting columns to the screen), consistent subsetting behavior (always returning tibbles), tolerance for various column types, support for non-standard column names, and no reliance on row names. They represent a more adaptable, user-friendly approach for handling data in R, especially suited for large, complex datasets.
+
+
+Below, you can find a simple function that takes a dataframe as input and returns a logistic regression model. Within, I only specify the `glm()` function which I have shown you above. Within the parentheses of `function()` I specify the name of the input object. This name is arbitrary and can be anything you want. I chose `df` for dataframe. It has to appear somewhere within your function later on; usually there where your operation on the input object is supposed to be performed. In my case this is `data = df`.
+
+```{r}
+country_model <- function(df) {
+  glm(vote ~ polintr + trstplt + trstprt + clsprty + gndr + yrbrn + eduyrs, 
+      family = binomial(link = "logit"), data = df)
+}
+```
+
+:::{callout-info}
+I will first talk you through the different steps and then provide you one long pipeline that does all this in one step.
+:::
+
+
+First, I import the ESS data and select the variables I want to use. I also clean the data a bit and get rid of unwanted observations or values.
+
+```{r}
+# Recoding the 'vote' variable to binary (1 or 0)
+# and filtering the dataset based on specified criteria
+prepared_ess <- ess |> 
+  mutate(vote = ifelse(vote == 1, 1, 0)) |> 
+  filter(
+    vote %in% c(0:1),
+    polintr %in% c(1:4),
+    clsprty %in% c(1:2),
+    trstplt %in% c(0:10),
+    trstprt %in% c(0:10),
+    gndr %in% c(1:2),
+    yrbrn %in% c(1900:2010),
+    eduyrs %in% c(0:50)
+  )
+
+```
+
+
+Then we will `nest()` the data as described here where I explain the logic of [nesting](../session1/session1.html#nesting).
+
+
+
+```{r}
+#| message: false
+# library for McFadden pseudo R2
+library(pscl)
+library(broom)
+
+ess <- read_csv("ESS_10_fr.csv") |>
+  select(cntry,
+         vote,
+         polintr,
+         trstplt,
+         trstprt,
+         clsprty,
+         gndr,
+         yrbrn,
+         eduyrs)
+
+ess_model <- ess |> 
+  as_tibble() |>  # Convert the data frame to a tibble
+  mutate(vote = ifelse(vote == 1, 1, 0)) |>
+  filter(
+    vote %in% c(0:1),
+    polintr %in% c(1:4),
+    clsprty %in% c(1:2),
+    trstplt %in% c(0:10),
+    trstprt %in% c(0:10),
+    gndr %in% c(1:2),
+    yrbrn %in% c(1900:2010),
+    eduyrs %in% c(0:50)
+  ) |>
+  group_by(cntry) |>
+  nest() |>
+  mutate(
+    model = map(data, country_model),
+    tidied = map(model, ~ tidy(.x, conf.int = TRUE, exponentiate = TRUE)),
+    glanced = map(model, glance),
+    augmented = map(model, augment),
+    mcfadden = map(model, ~ pR2(.x)[4])
+  )
+```
+
+
+
+
+```{r}
+# Comparing AICs
+pR2(logit)
+
+ess_model |>
+  unnest(mcfadden) |>
+  ggplot(aes(fct_reorder(cntry, mcfadden), mcfadden)) +
+  geom_col() + coord_flip() +
+  scale_x_discrete("Country")
+```
+
+
+
+```{r}
+#| message: false
+# Comparing coefficients
+ess_model |>
+  unnest(tidied) |>
+  filter(term == "polintr") |>
+  ggplot(aes(
+    reorder(cntry, estimate),
+    y = exp(estimate),
+    color = cntry,
+    ymin = exp(conf.low),
+    ymax = exp(conf.high)
+  )) +
+  geom_errorbar() +
+  geom_point() +
+  scale_x_discrete("Country") +
+  ylab("Odds-Ratio of political interest") +
+  xlab("Country")
+```
+
+
+
+<style>body {text-align: justify}</style>
+

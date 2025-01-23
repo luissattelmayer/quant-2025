@@ -1,0 +1,63 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "Advanced RStudio Labsessions"
+  subtitle: "Quantitative Methods II"
+  author: "Luis Sattelmayer"
+  date: last-modified
+  repo-url: https://github.com/luissattelmayer/quanti-2024
+  sidebar:
+    collapse-level: 6
+    pinned: true
+  chapters:
+    - part: "Introduction"
+      chapters: 
+        - index.qmd
+    - part: "OLS Recap"
+      chapters:
+        - session1/session1.qmd
+    - part: "Logistic Regression"
+      chapters:
+        - session2/session2.qmd
+    - part: "Multinomial Regression"
+      chapters:
+        - session3/session3.qmd
+    - part: "Diff-in-Diff"
+      chapters: 
+        - session4/session4.qmd
+    - part: "Regression Discontinuity Design"
+      chapters:
+        - session5/session5.qmd
+    - part: "Time Series"
+      chapters:
+        - session6/session6.qmd
+
+
+
+bibliography: Meine Bibliothek.bib
+
+
+format:
+  html:
+    theme: cosmo
+    css: custom-styles.css
+    callout-appearance: simple
+    code-block-background: true
+    code-block-border-left: "#31BAE9"
+    highlight-style: pygments
+    toc: true
+    toc-location: right
+    code-copy: true
+    code-link: true
+    citations-hover: true
+    footnotes-hover: true
+    embed-resources: true
+    self-contained-math: true
+    grid: 
+      sidebar-width: 300px
+      margin-width: 300px
+
+editor: source
+

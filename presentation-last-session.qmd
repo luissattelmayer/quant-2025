@@ -1,0 +1,87 @@
+---
+title: "Where to go from here?"
+subtitle: "Advanced RStudio"
+author: "Luis Sattelmayer"
+date: today
+date-format: long
+format: 
+  revealjs:
+    highlight-style: breeze
+    citations-hover: true
+    bibliography: Meine Bibliothek.bib
+    slide-number: c/t
+    footer: "Advanced RStudio"
+    theme: simple
+    echo: true
+    incremental: false
+    pdf-separate-fragments: false
+    self-contained: true
+---
+
+## Outlook on summer & next semester {.smaller}
+:::{.fragment .nonincremental}
+- If you like R, I can only recommend you start to play around with it *on your own*
+- Try to find quantitative papers in your field of interest
+  - How do they measure things?
+  - What data?
+- What do you want to do?
+  - Do you have the necessary skills or data for what you want to do?
+:::
+
+:::{.fragment .nonincremental}
+- Making progress in coding takes time
+- This brings me to my best advice, fix yourself a goal: what do you want to do?
+- Lastly for frustration management: never work more than two hours on code when it is not working
+  - Like seriously, take a walk and come back to it later! Try to avoid too much frustration with R ;) 
+:::
+
+## Personal experience 
+
+:::{.fragment .nonincremental}
+- I started out like you
+  - and I struggled so much with my final paper
+:::
+
+:::{.fragment .nonincremental}
+- The key is to start identifying the steps you need to take to achieve some bigger goal in coding
+  - then start to learn or google the steps you need to take
+- If I was not good at this three years ago, you all still have a chance; I mean it!
+:::
+
+
+
+## Some thoughts on a possible roadmap  {.smaller}
+
+:::{.fragment .nonincremental}
+- Here are some things you could check out on your own which I like and have worked on or am still working on: 
+  - For some things on causal inference (in R): [Causal Inference Mixtape](https://mixtape.scunning.com/)
+  - Ever heard of Bayes? [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) 
+  - For some more advanced text-as-data stuff: [Text Mining with R](https://www.tidytextmining.com/)
+  - One of the best R ressources out there: [Telling Stories with Data](https://tellingstorieswithdata.com/)
+  - Some text-as-data stuff but the theory behind it: @grimmer_text_2022
+:::
+
+:::{.fragment .nonincremental}
+- Some shameless self promotion: Malo's and my class on Computational Social Sciences in January
+:::
+
+:::{.fragment .nonincremental}
+- You don't have to get all fancy with webscraping, causal inference, TaDa etc. 
+  - a great knowledge of statistics goes a long way and will save your time later on
+- We are always in need of more quantitative PhD students in France
+:::
+
+## Final Homework  {.smaller}
+- If you have questions on stats, text-as-data or any other coding related questions, contact me! I love talking about it and what I have shown you is only a marginal part of what you can do 
+  - and once the semester is over I am much more flexible with my time
+  
+- The last homework for this semester: create a **meme** about this class, something you have learned or whatever you want; it can be about anything, get creative!
+  - yes, it is mandatory, even it is a shitty meme
+
+- Lastly, have fun during the final weeks while writing your code and your final paper ;) 
+
+# Thank you for this semester with you; you were a wonderful class and I wish you all the best!
+
+
+## References
+

@@ -1,0 +1,540 @@
+# Introduction to Webscraping
+
+<style>body {text-align: justify}</style>
+
+Before we start: The following script requires some familiarity with basic principles of data management with `tidyverse`. Further, it helps if you know how to write your own functions in R and how to `map()` them on a list using the `purrr` package. If you are not familiar with these concepts, I recommend you to check out the optional parts of Session 2 and 3, in which I go over these packages and explain the methods a bit more in detail. 
+
+This script as an introduction and I will try to keep the technical terms very light. If you have some experience with building websites or coding in HTML, (I suppose that if you know CSS or even JavaScript you will not have any problems with these tutorials), you might find this relatively straight forward. But please believe me when I say that even without any prior experience in this field, you will be able to follow along. I still do not know how to code a website myself but I know how to extract data from them.
+
+This script will introduce you to:
+
+1. What is webscraping?
+2. How are websites structured?
+3. What is the webscraping workflow?
+4. Extracting content from websites (`rvest`)
+5. Ethics of webscraping
+6. Processing the content (regular expressions & `stringr` package)
+
+Point 5 is of special importance and if you follow my script, I would really want you to read this section attentively. Both in terms of the legal and ethical implications of webscraping, it is important that you take these things into consideration when you are scraping websites. Questions of privacy, data protection and copyright are important and we should always be aware of them.
+
+I will gradually throughout the semester add new content. The goal is to also introduce students to the logic of scraping dynamic (a term you will understand in a few seconds) websites with (R)Selenium. Ideally this would require some basic knowledge of Python because it is much easier in Python, but I will try to keep the Python code as simple as possible.
+
+## What is webscraping? 
+Webscraping is a method that allows us to extract data from websites. Ideally we do this in automated fashion, so that we can collect large amounts of data in a short amount of time. 
+
+If you want to work with text and analyze it quantitatively, webscraping is a very useful tool. In Computational Social Sciences, we are oftentimes interested in analyzing large corpora of text that an organization, political party or individuals have emitted. If these texts are not yet collected, we have to do this. 
+
+Now, we could start out and do this by hand. But frankly, nobody has time for that and programming is all about making life the easiest for the user and automating everything as much as we can. Nobody wants to click through party press releases, copy paste every item of interest into a spreadsheet and do this for potentially millions of documents.
+
+Webscraping on the other hand allows us to write a script that does this for us. This script will go to any website out there, find the content we are interested in, extract it and store it in a csv file which we can then use for any other analysis. Data from the Web tends to be unstructured and messy, we might have to do some data cleaning on the text afterwards. But the better we write our "scraper" beforehand, the better the data quality. 
+
+
+## How are websites structured?
+Websites are built with a combination of different languages. You access them by putting in a URL into your browser. URL stands for Uniform Resource Locator and it is somewhat the online adress of any website on the Web. In most cases, when you navigate to a website you are looking at a combination of HTML, CSS and JavaScript. HTML is the structure of the website, CSS is the design and JavaScript is the interactivity. HTML stands for Hyper Text Markup Language and it is the standard language for creating documents designed to be displayed in a web browser. It can be assisted by technologies such as Cascading Style Sheets (CSS) and scripting languages such as JavaScript. But for now, let's only stick to HTML. 
+
+For scraping websites, it is essential that we understand the fundamentals of HTML code. Now, please do not be afraid, HTML code is not hard to understand, there are patterns and regularities like in any other programming language and HTML is no C++. The only thing we need to do, is to find out where the content we are interested in is located in the HTML code. If you want to check out *any* website's HTML structure (also called a tree), you can do so by right-clicking on the website and selecting "Inspect". This will open a new window in your browser that shows you the HTML code of the website. Why don't we take a look at [Jan Rovny's SciencesPo profile](https://www.sciencespo.fr/centre-etudes-europeennes/fr/chercheur/jan-rovny.html). If you go on the website, right-click and go on inspect, you should see something like this: 
+
+![](images/jan-html.png)
+
+If you now wanted, to find something specific on this website, you could either look in the HTML code for it. Or you highlight it on the website and then right-click and select "Inspect". This will automatically take you to the part of the HTML code that is responsible for the content you have highlighted! 
+
+![](images/jan-highlighted.png)
+In this picture, I have first highlighted Jan's name with my cursor and then inspect the website. Note how the `<h1 class="title"> Jan Rovny </h1>` part is highlighted in blue. This is where his name is stored in the HTML code. 
+
+This is the basic principle of webscraping. We find the content we are interested in and then we write a script that tells the computer to go to the website, find the content and extract it. We will come back to this in a second. 
+
+
+### Dynamic and static websites
+Generally speaking, we can divide websites into two different categories: dynamic and static websites. Static websites are our friends because they are easily scraped. They are built with HTML and CSS and the content is always the same. Dynamic websites on the other hand are a bit more tricky. They are built with HTML, CSS **and** JavaScript and the content is not always the same.
+
+Let's start with *static websites*. Whatever you do, wherever you scroll on a dynamic website, there are no new panels that appear, no more articles that can be loaded by clicking on a button, the content is always the same. It means that there is no JavaScript running somewhere that makes the website interactive. Static websites are also nice to scrape since they do not require a lot of communication between the website and the websites server where they store their information and data. As a general rule of thumb, scraping processes are usually slowed down on the server's end, not on ours (provided that our code is efficient of course).
+Let's look at the [CEE's website](https://www.sciencespo.fr/centre-etudes-europeennes/fr/doctorants.html); specifically at that of the doctoral students of my lab. If you go on the website and scroll all the way down, you do not see that it is changing in any way; there are no new elements that appear all of the sudden. This is an example for a static website.
+
+*Dynamic websites* are a bit more tricky. They are built with HTML, CSS *and* JavaScript and the content is not always the same. The content can change. This is a problem for us because we want to scrape the content and if the content changes, we have to write a script that can handle this. This is where the `RSelenium` package comes in. It allows us to scrape dynamic websites. [^1] Dynamic websites can change the content displayed to the user based on interactions, user behavior, or inputs without the need to reload the entire page. This interactivity is often powered by AJAX (Asynchronous JavaScript and XML) and APIs that fetch data on demand. If you do not know what this is, simply skip all the technical parts. I just want you to retain that there are ways to scrape these websites as well, but it is a bit more complicated. Imitating APIs that fetch data on demand is not and I will show you further below how to do that. We will leave dynamic website and their annoying JavaScript aside for now and focus on static websites first by looking at the webscraping workflow.
+
+[^1]: To be completely frank, `RSelenium` is a pain in the butt and was one of the reasons why I started to learn Python at some point. And for now -- it does seem as if things are changing for the `rvest` package -- I would recommend that you do too. Contact me for questions on this or wait until I update this script and include Python code. 
+
+
+### The different html elements
+A node, in web development, refers to any single point in the document tree. This tree represents the structure of a webpage. HTML documents are made up of nodes; these can be element nodes (like `<div>, <p>, <a>`), text nodes (the actual text within those elements), and even attribute nodes (attributes of elements, like `href` in an `<a>` tag).
+
+The document tree is hierarchical, resembling a family tree, with branches that represent parent-child relationships (these are not my words, it is used in the web design world). For example, if a <div> contains a <p> (paragraph), the <div> is considered the parent node, and the <p> is its child node. The <p> is also a sibling of any other elements that are children of the same parent.
+
+:::{.callout-note} 
+The more you start to scrape websites, the more you will get used to reading the HTML source code. It is not as difficult as it seems at first. However, websites can be terribly messy and badly coded. This is why you will often have to try different things and see what works. Troubleshooting, as in every coding setting, is key.
+:::
+
+When scraping a website, you'll often need to identify specific divs or other elements (nodes) containing the data you wish to extract. Here’s how:
+
+Use the browser's Developer Tools (usually accessible by right-clicking on the page and selecting "Inspect" or pressing F12 ) to view the source code and structure of the page -- this is what I have shown you based on Jan's CEE website. This tool highlights the tree structure of HTML documents, showing parent-child relationships. You will get used to reading it, or to finding your way around. One easy way to identify the location of the element you are interested in, is -- as indicated above -- to highlight it and then to rightclick --> inspect. The HTML source code will automatically open and highlight the part of the code that is responsible for the content you have highlighted.
+
+Once you know where, let's say the title of some website or article you wish to scrape, is stored, you can then try to figure out the path to this specific HTML part, in order to use this path for our code. We will have to specify where our code should go look for our element of interest. Generally speaking, there are two ways to do this: CSS Selectors and XPath. 
+
+1. **CSS Selectors**: Learn to use CSS selectors, which are patterns used to select the elements you want to style. In web scraping, these selectors help you specify the elements you wish to extract from a webpage. For example, `div.article-content p` selects all `<p>` elements inside a `<div>` with a class of `article-content`.
+
+2. **XPath**: XPath (XML Path Language) is another powerful tool for navigating through elements and attributes in an HTML document. It allows for more complex queries, like selecting elements based on their content or attributes.
+
+
+Now these two things sound intimidating, they might also be at first sight, but usually CSS selectors (which are much easier to read but less precise) do the trick. And I hardly ever try to figure this out by hand. There are two things you can do. Assuming you have identified the location of your html content of interest within the source code, you simply right click on that line of html code, and then you can copy the CSS selector or the XPath. 
+
+The easiest way to find the path to our chunk of interest is the [SelectorGadget](https://chromewebstore.google.com/detail/selectorgadget/mhjhnkcfbdhnjickkkdbjoemdmbfginb?hl=de) browser extension. This is a plugin allows you to click on the element you are interested in and it will give you the CSS selector. I will show you how to use it in the next section. I recommend you install it and clip it to the right upper corner where, at least in Chrome, your extensions are listed. 
+
+
+
+Once you have installed the extension, click on it. It will change several things. First, your cursor will now probably create different orange boxes around the elements of the website. Second, you will have sort of a search bar in your lower right corner. If you now click on just some element, it will be highlighted in green and some text will appear in the search bar which had opened up before. Let's take a look at how this looks: 
+
+![](images/selector-gadget.png)
+
+This is the CEE's website where they display the doctoral students. I have only clicked on the word "Doctorants" which is the websites title. In the search bar, the SelectorGadget has now suggested a CSS selector. [^2] This is the path to the element of interest. We now know, where, if we were interested in the title of the website, it is stored in the HTML code. You can now copy this path and use it in your code to scrape that specific content. 
+
+[^2]: Note that you can also use it as a search bar. If you are unsure about the path to your element of interest, you can type it in and it will highlight all the elements that belong to it in yellow.
+
+Let's look at another example. Let's say I am interested in all the names of the doctoral students. I can click on one of the names and the SelectorGadget will give me the CSS selector for that specific element. Here it gives us the tag "a".
+
+![](images/selector-a.png)
+
+
+But see also how it has highlighted other things in yellow as well. This means that the CSS selector is not unique to the element I have clicked on. I am not interested in anything else but the names of my colleagues! For now, it shows "a" in the search bar. That is because the name of the doctoral students is stored in an "a" tag but also other information is stored in some "a" tag. We will have to make sure that we only select the names of the doctoral students. For that, you can still use the Selector Gadget and click on any yellow highlighted content which you are not interested in (i.e. in our case that would be the email addresses or the drop down menus called "Recherche", "Publications" etc, see picture). We can make sure that we only select the element(s) that we want, if by clicking on the yellow elements we do not want. Clicking on one, can already make the other unimportant ones disappear as well. This should be the case here. 
+
+![](images/selector-correct.png)
+
+Now, the CSS selector is unique to the names of the doctoral students. You can also see that next to the search bar it says "Clear (35)". This means that we are still selecting 35 elements with our current tag (in the search bar) called `.views-field-title a`. Given that we should be about 35 doctoral students at the CEE, this is probably the right path that only captures the names of the PhD students here. This step is an important step of verification. In Computational Social Sciences, we often work with large datasets. If you are interested in scraping the entirety of something (party press releases, a newspaper, parliamentary speeches, you name it), you ideally want to make sure that you have scraped the entirety of the content (available online). Selecting a wrong HTML tag, can lead to you either scraping too little resulting in an incomplete dataset or too much resulting in tedious data cleaning work afterwards. 
+
+Was this complicated and a lot? It probably was. And I understand it. The first time I tried to do this on my own, it was horribly complicated and I did not manage at all. Trust me, this will come with time. And it will become much more intuitive. You should play ariund with the SelectorGadget and try to find the CSS selector for different elements on different websites. If that does not work out, try the other method of going into the source code of the HTML structure, right clicking on the element of interest and then selecting "Copy" --> "Copy selector" or "Copy XPath".
+
+Maybe just bear with me and check out the code. Everything will become simpler. The coding part is not necessarily hard when it comes to static websites. The hard part is to find the right CSS selector or XPath and then to validate that you have selected the right elements. Once we properly start scraping in this script, it will become much clearer.
+
+
+## Extracting content from websites (`rvest`)
+For my first example, we will stick withg the [CEE's website where they display the doctoral students](https://www.sciencespo.fr/centre-etudes-europeennes/fr/doctorants.html). We will use the `rvest` package to extract the content from the website. The first thing which we have to do, is to copy paste the URL of the website we want to scrape into the `read_html` function of the package. This will give us the entire HTML code of that belongs to the website whose URL (remember the online address) we fed to the function. When you copy paste, don't forget the "https://" as well as the quotation marks around the URL text string. If you simply go into your browser, click on the URL once, it will highlight the "https://" automatically (even though you might not see it).
+
+
+
+```{r}
+#| messages: false
+library(tidyverse)
+library(rvest)
+
+read_html("https://www.sciencespo.fr/centre-etudes-europeennes/fr/doctorants.html")
+```
+The output suggests that we have retrieved ("scraped" so to say) the html source code of the website. Feel free to go back to the original website, right click and inspect it to see that these are the same things. We could of course also store the HTML code in a variable. This is often useful if you want to scrape multiple websites and store the HTML code of each website in a separate variable. 
+
+```{r}
+cee <- read_html("https://www.sciencespo.fr/centre-etudes-europeennes/fr/doctorants.html")
+glimpse(cee)
+
+```
+
+Now, we want to extract some content from the website. We want to know the names of the doctoral students. We can do this by using the `html_nodes` function of the `rvest` package. This function allows us to extract the content of the website based on the HTML node. Remember that we have used the Selector Gadget above to find the node corresponding to the names of the doctoral students. We can now use this information to extract the names of the doctoral students. For the sake of simplicity and to keep the code clean, I will store the URL in a variable called... url. This will be part of the workflow later on when we start scraping multiple websites.
+
+```{r}
+url <- "https://www.sciencespo.fr/centre-etudes-europeennes/fr/doctorants.html"
+
+read_html(url) |> 
+  html_nodes(".views-field-title a") 
+
+```
+Here we can see that there are 35 nodes that all have a similar structure `<a href="chercheur/lennard-alke.html">Lennard Alke</a>`. Since I only want the text corresponding to the names, we will use the `html_text` function to extract the names of the doctoral students. The text is stored in the `a` tag.
+
+```{r}
+read_html(url) |> 
+  html_nodes(".views-field-title a") |> 
+  html_text()
+
+```
+Now, we have extracted all the names on the website. Feel free to check out who these people are. You should know at least two by now. 
+
+I can tell you though that there are other things stored in our initial HTML node `.views-field-title a`. We have extracted the text but there is also something called `href`. This is a hyperlink reference and key for webscraping. If you go back to your browser and on the website we are currently scraping, you will realize that by hovering over our names with your cursor, you can click on them and it will take you to a new website. The information of where your Browser should take you when you click on a name has to be stored somewhere. And well it is stored in the HTML source code as well, within the node we have already identified and to be more precise, the corresponding link (URL) is stored in the `href` attribute of the `a` tag. We can extract this information as well as such: 
+
+```{r}
+read_html(url) |> 
+  html_nodes(".views-field-title a") |> 
+  html_attr("href") 
+```
+
+Note how this time we are not using the `html_text` function but the `html_attr` function. This function allows us to extract the content of a specific attribute of the HTML node. `href` is such an attribute. 
+
+Now if you look at the list of elements we have extracted, you will see that they are not complete URLs. They are relative URLs. This means that they are not complete URLs but rather URLs that are relative to the current website. Our extracted URLs are of the form `chercheur/malo-jan.html`. Websites always need "https://www." in front of the URL to be complete. In our case, we can look at the website of Malo on here to see what is missing. His actual URL is
+
+> https://www.sciencespo.fr/centre-etudes-europeennes/fr/chercheur/malo-jan.html
+
+This means that we have to add `https://www.sciencespo.fr/centre-etudes-europeennes/fr/` to our relative URLs. We can do this by using the `str_c` function from the `stringr` package that comes with the `tidyverse`. More on that package further below. Here it simply adds (*concatenates* which is where this function gets its c from) the two strings together.
+
+
+
+```{r}
+cee_phds <- read_html(url) |> 
+  html_nodes(".views-field-title a") |> 
+  html_attr("href") %>%  # if you are wondering why the %>%, check the note below
+  str_c("https://www.sciencespo.fr/centre-etudes-europeennes/fr/", .)
+
+head(cee_phds, 5)
+```
+
+:::{.callout-note} 
+In some rare cases, you will have to specify something in long pipes (%>% or |>) that is called a placeholder. Usually in pipes, you do not have to specify the object on which you are doing something anymore. Sometimes you do, however. In our case that is to indicate whether the string of the URL that was missing should be added at the beginning of our relative URLs or at the end. The dot `.` is a placeholder that tells the function to use the object that was passed to the pipe before the placeholder. And for whatever reason, the Base R placeholder does not work in this case and you have to work around it by using the old `magrittr` %>% pipe and the corresponding placeholder which is a dot. 
+:::
+
+We now have officially scraped the URLs which lead to the individualy profiles of the CEE's PhD students.
+
+
+
+## What is the webscraping workflow?
+Now, you might be wondering why I emphasized the HTML attribute `href` so much in the section above. Or why we scraped URLs although I was speaking of content before. The reason is that webscraping is not only about extracting content from websites. It is also about extracting the structure of the website. This is important because it allows us to scrape multiple websites in a structured way. What I showed you on the CEE's website could technically be done manually. It would take longer by hand, if you know how to code, but still... it could have been done manually. But let's suppose, I would like to have 10 000 press releases of a party, or scrape all parliamentary speeches of the French Assemblée Nationale. This would be doable manually but it would be terribly chiant (excuse my French).
+
+In very very broad terms, webscraping is a two step process. You first collect all the URLs behind which your content of interest is stored, and *then* you scrape the content behind these URLs. This is the workflow we will follow in the next section. To put it differently, we first need to collect a list of URLs (for which we will build one scraper) which serves us then for our next stept during which we scrape the content with a second scraper. 
+
+This is where we will have more coding fun and where you might need a refresher of how to write a function and the `purrr` package (Session 2) of this class. But I will try to talk you to my steps as much as possible. Feel free to go back, however, and look at the code from the previous sessions.
+
+
+### Automated collection of URLS
+In an ideal world, where web designers are nice people, all websites would have a similar structure. This would mean that we could write one scraper and use it for all websites. But we do not live in an ideal world. Websites are different and we usually have to write a new scraper for each website. 
+
+The typical example for an introduction to webscraping would be to scrape IMDB. But this is a social science oriented class and we will collect political texts. We will start by harvesting some press releases by the German Social Democratic Party, the SPD. There is no reason as to why this party other than their website is well coded and can easily be scraped. The first thing we need to do is to identify their press release archives. Ideally they have something like this, fortunately they do. If you click on here you can check them out yourselves. And no worries, you do not need to be able to speak German for this task. As a matter of fact, the HTML language and coding in general are both universal enough to bridge language barriers -- and in some moments deepl does the trick (but I know that this is no news to any of us). 
+
+The URL of the press release archive of the SPD is [https://www.spd.de/service/pressemitteilungen](https://www.spd.de/service/pressemitteilungen). First we need to understand the website's structure to write code that will alternate over each page of their archive and retrieve **only** those URLs that we are interested in, i.e. the URLs of the press releases. If you click on the link and scroll all the way down, you will see that there is a red circle with a one, another with a two, three dots and then a 111 in another red circle, like in the picture below. [^3]
+
+[^3]: Please note that I am writing this script in February 2024. The number 111 will not be up to date in a couple of days as the party keeps releasing press releases. Your code might have to be adapted slightly but that is not an issue usually. 
+
+![](images/spd-numbers.png)
+
+
+This is a typical pagination structure. It means that the press releases are not all on one page but on multiple pages. I know that all of you have come across this before and that we have all already clicked on these things in our digital lives. 
+
+Another thing that you might realize, while you have scrolled down, is that the page has remained more or less the same throughout and that nothing new appeared while going down. This is a very good and solid indicator that the website is *static* (yay).
+
+Now click on the red two in the circle. This will redirect you to the next page. You will see that the URL has changed to [https://www.spd.de/service/pressemitteilungen/page/2](https://www.spd.de/service/pressemitteilungen/page/2). This is a very good sign. If you now scroll down, click on the red arrow next to the 111, you will be redirected to the next page. The URL will be [https://www.spd.de/service/pressemitteilungen/page/3](https://www.spd.de/service/pressemitteilungen/page/3). This means that whenever we click on to the next page, the URL changes in a predictable way and we can -- very -- easily reproduce this in R by creating a list of URLs that we can then have our code use to extract the URLs that are stored on each of "page/3" to the last page. This is an ideal scenario. Sometimes you will have to look a bit more closely for the subtle changes in initial URLs that we need to find to automate our process. 
+
+Now, a quick excursion in some sorting and filtering. We want to make sure that the list of initial URLs, over which we will then scrape in a second step, contains **all** the URLs. Since we know how the URLs are structured and behave, we can also simply go into our search bar and manually change the number from, let's say, 3 to 100. If you do this, you will approximately land in 2016 and we will see the display of press releases. To speed up the process, you never want to go one by one, meaning to try out first "page/3", "page/4", "page/5" and so on. You want to find the last page as quickly as possible. For that, you randomly type in a large number and see what happens. The worst thing that can happen is that you stumble upon a 404 error; which is just the website telling us that the URL we are trying to navigate to looks like it is on their website but does not exist in reality. Then we know that we will have to try a smaller number to approximate the last page on which the press releases are stored. I suggest you do this in half steps meaning that you always take double or half the number and then see what happens. This is a much faster way to sort or filter things in computer science than increasing/decreasing one step at a time. In our case, I put in 100 and did not get a 404 error. If I now put in the double ["https://www.spd.de/service/pressemitteilungen/page/200"](https://www.spd.de/service/pressemitteilungen/page/200), you surprisingly do not get a 404 error. But if you scroll down, we can see that we have reached 111. And that this seems to be the last page of available press releases in the SPD's archives. Oftentimes, you would have gotten an error message somehow on the website. But from this paragraph, I just want you to take away that it is faster to sort and filter in double steps for the final URL than to go one by one.
+
+
+:::{.callout-note}
+There are plenty of errors that you can get on a website or on the Web. They are called HTTP response status codes. 404 is one of the most frequent ones but you might encounter others as you scrape more. You do not have to know them. If you see one that is not 404, simply google it and then troubleshoot from there. Here is an [overview](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+:::
+
+
+Alright, let's finally get our hands on some code. We know that the URLs are structured in a way that we can easily predict the next URL. We also know that they alternate by simply changing the last digit of the URL and that there are 111 URLs in total. We can now create an object that contains all the initial URLs. The code below stores a character string with the root of the URL in an object called `intial_url`. We then use the `str_c` function from the `stringr` package to concatenate the root URL with the numbers 1 to 111. The `sep` argument is set to `""` to make sure that there is no space between our initial url root and the numbers we want to add.
+
+
+```{r}
+intial_url <- "https://www.spd.de/service/pressemitteilungen/page/" 
+initial_urls_spd <- str_c(intial_url, 1:111)
+
+initial_urls_spd |> head()
+```
+Alright, now we have a list of URLs that we can use to scrape the URLs of the individual press releases. For that, we will have to find the URLs behind which the individual press release is stored. 
+
+![This is what the Press Releases look like on the Website](images/example-press-release.png)
+If you want to navigate to a single press release you have to click on the black button that says "MEHR" (more in German). Right-click on it -> go to inspect -> and the HTML source code will already show us in what node the URL is stored. 
+
+![The HTML source code corresponding to the MEHR button.](images/url-html-spd.png)
+
+As for the CEE's website, it is within an "a" tag and the URL is stored in the "href" attribute. You could of course also use the GadgetSelector extension which will yield the same result. Now let's apply the same logic as above. For the first example, I will only use the first entry of our `initial_urls_spd` list: 
+
+
+```{r}
+library(rvest)
+initial_urls_spd[1] |> 
+  read_html() |> 
+  html_nodes("a") |> 
+  html_attr("href") |> 
+  head(40)
+```
+
+If we look at this, we can see that it picked up plenty of more things that are stored in the same way with an `a` node and that have the `href` attribute. However, by clicking on the "MEHR" button, i.e. navigating to an individual press release, I can look at what the press release URL individually looks like. They all have `/service/pressemitteilungen/detail/news/` in their URL whereas the other, unnecessary, stuff that we picked up as well does not have this. We can use this to filter out the URLs that we do not need. 
+
+```{r}
+spd_urls <- initial_urls_spd[1] |> 
+  read_html() |> 
+  html_nodes("a") |> 
+  html_attr("href") |> 
+  # this here transforms the output into a tibble on which we can then do
+  # the usual data management operations
+  tibble(url = _) |> 
+  # and I filter the column "url" for the string that we need
+  filter(str_detect(url, "/service/pressemitteilungen/detail/news/"))
+
+spd_urls |> head(10)
+
+```
+
+:::{.callout-warning}
+Now before we automate this, one really really important thing! Always scrape as much information as you later need. This applies both for content extraction as well as simply recovering URLs. In our case, the URLs contain a string that indicates the date. That is awesome, but not the norm. I really suggest you always extract information which let's you arrange things in a temporal order. This is a really important step to avoid later headaches or having to scrape all over again. What we are looking at, is a relatively easy task of scraping and it would not take too much of our time to do this again with another element. But if we are talking about scrapes that take a day or potentially weeks, you want to make sure **beforehand** that you have all the necessary elements.
+:::
+
+I suggest we also make use of the date element that comes within each URL and store it in a separate column called `date`. This will make it easier for us to sort the press releases by date later on, if ever we have to. And I want to get you used to good practices within scraping as early as possible. For that, I will use `str_sub()` of the `stringr` package (for a more thorough review of that powerful package see the section on it below). I `mutate()`, create a column called `date` and then specify that `-10`, i.e. the last 10 characters of the URL counting from the back of the character string, should be stored in that column. In R, if you want to specify that something should be counted/displayed/extracted or whatever *from the end* of something, you do so by putting a minus sign in front of it. The number simply counts the characters of that string. 
+
+```{r}
+spd_urls <- initial_urls_spd[1] |> 
+  read_html() |> 
+  html_nodes("a") |> 
+  html_attr("href") |> 
+  # this here transforms the output into a tibble
+  tibble(url = _) |> 
+  # and I filter the column "url" for the string that we need
+  filter(str_detect(url, "/service/pressemitteilungen/detail/news/")) |> 
+  # now I extract the date from the URL
+  mutate(date = str_sub(spd_urls$url, start = -10),
+  # here I add the root of the URL so that it can be read as an URL by
+  # RStudio later on
+         url = str_c("https://www.spd.de", url))
+
+spd_urls
+```
+
+
+This is all fun and games but we have to automate this process. We could do this by using a for loop but this is not Python, I do not like for loops and the `purrr` package is (one of) my favorite packages in R. If we feed it a function, we can make it iterate over a list of URLs and apply the function to each element of the list. This is done with the `map()` function. We can also use `map_df()` which will return a data frame. However, since I work with tibbles we will write our function in a way that will return a tibble instead. 
+
+```{r}
+library(purrr)
+
+scraping_spd_urls <- function(url) {
+  url |> 
+    read_html() |> 
+    html_nodes("a") |>
+    html_attr("href") |>
+    tibble(url = _) |>
+    filter(str_detect(url, "/service/pressemitteilungen/detail/news/")) |>
+    mutate(date = str_sub(url, start = -10),
+           url = str_c("https://www.spd.de", url))
+}
+```
+
+If you run this on your end, you should now have a function in your environment under the section "Functions" that is called `scraping_spd_urls`. Now we can use `map_df()` to apply this function to our list of URLs. What you see me do here is that I only use the first 5 URLs of the list. This is because I want to make sure that the function works as intended. If it does, I can then apply it to the entire list. Then I specify the function that `purrr` should map over our list. The last element, `.progress = TRUE` will give us a loading bar that inidicates the progress of the scraping. This is particularly useful for longer scraping processes. 
+
+```{r}
+spd_press_releases <- map_df(initial_urls_spd[1:5], scraping_spd_urls,
+         .progress = TRUE)
+
+spd_press_releases
+```
+
+If you are happy with the result, you could now apply the function to the entire list. For reasons of time, I will not do this. Congratulations, you have built your first scraper. 
+
+### Scraping content
+This was the first step of the scraping workflow. Now we are going to inspect the structure of the website on which the respective press releases are stored. We will then write a function that will scrape the content of the press releases, put this in a `map()` and retrieve our information.
+
+As already laid out above, you should really put some thoughts into the information you want to scrape. There is nothing worse than either having to scrape all over again or having to wrangle with your data afterwards because you have not tested your code sufficiently enough beforehand. 
+
+If you look at the press release's individual website: [https://www.spd.de/service/pressemitteilungen/detail/news/einladung-zur-pressekonferenz/02/02/2024](https://www.spd.de/service/pressemitteilungen/detail/news/einladung-zur-pressekonferenz/02/02/2024), we can see that it has a title, the date, the content. Some other things you might encounter in these settings are sub-titles, sub-headers, other indices and so on. I suggest you always scrape everything. It is not the different elements that take time when scraping, it is navigating to the website, i.e. marginally more elements will not slow down your code. 
+
+You will have to find the different CSS selectors/XPath elements for the corresponding elements. And you want to make sure that they are unique **and** stay the same for each URL. You can never be sure of the later unless you do some proper validation before and after. We do not want to check this manually for each URL because that is not what automation is about. But you would want to check this for a sample of URLs. And be smart about it. If your code breaks after a certain amount of URLs or after a while it only returns NAs, you probably have a switch in the websites HTML structure. On well coded and new websites, this is rather rare because they are consistent. But as I have said before, the Web is full of badly coded website -- the majority of them are. 
+
+The logic is the same as for Jan's profile or the CEE's website. You want to identify the HTML code blocks that correspond to the information of the title, the date, and the content. Here, I really recommend that you use the Selector Gadget I've shown you. This will allow you to click on the parts which you want and also eliminate other unwanted html elements. For the headline for example, I select the SelectorGadget, click on the headline and it gives me `.news__headline` as the CSS selector. 
+
+![](images/spd-headline.png)
+
+For the date: 
+
+![](images/spd-date.png)
+
+
+And now for the content:
+
+![](images/spd-content.png)
+
+
+And this, we can now put into a function all together: 
+
+```{r}
+scraping_press_spd <- function(url) {
+  page_content <- read_html(url)
+  date <- str_sub(url, c(-10))
+  content <-
+    html_elements(page_content, ".text__body") |>
+    html_text()
+  head_title <- html_node(page_content,
+                          "#main > div > section > div.news > div.news__header > div > h1") |>
+    html_text()
+  spd_pr <- tibble(date, content, head_title)
+}
+
+```
+
+```{r}
+spd_pr <- map_df(spd_press_releases$url[1:5], scraping_press_spd, .progress = TRUE)
+
+spd_pr |> head()
+```
+
+It seems as if the content column is filled twice; once with an empty string and once with the actual content. This is because the CSS selector I used is not specific enough. For the sake of the example, we will simply filter for an empty string. But you should always make sure that your CSS selectors are specific enough. 
+
+
+```{r}
+spd_pr <- spd_pr |>
+  filter(content != "")
+
+spd_pr |> head()
+```
+
+### Speeding up the process with `future` and `furrr`
+
+
+
+## Process text in R 
+The whole purpose of our scraping was to get textual data which we can then use to analyze the text in automated fashion using methods from Computational Social Sciences. However, handling text in R comes with some additional methods that you need to know. 
+
+Even if you do not directly want to analyze your scraped data, you might still be faced with challenges of data management and data cleaning. Sometimes this is because there was absolutely no way to pick up only the date but every date HTML element now also contains character strings that you want to get rid of. Or let's assume that you need everything in lower case letters, or get rid of this one ad which your scraper picked up no matter what you tried. This is where regular expressions and the `stringr´ package (which is part of the tidyverse environment) come into play.
+
+
+### regular expressions 
+Regular expressions -- in coding linguo referred to as regex (singular) or regexes (plural) -- are a powerful tool for pattern matching and text manipulation, widely used across various programming languages, including R. Pattern matching in this case simply means that you tell R to look for a specific pattern in a character string (a variable that contains text in its rows) and then do something with it. Sometimes this might be simply one specific word, or even a specific sentence. But sometimes you might need to tell R to look up strings that are 4 digits, then a dot, two digits, another dot, followed by lastly two digits again. This would for example be a date (yyyy.mm.dd). It could happen that you have a lot of dates which were scraped together with other stuff and you only want to extract the dates. Regexes are the perfect tool for this.
+
+They allow you to search, replace, split, or extract parts of strings based on specific patterns. Understanding regexes can significantly enhance your ability to work with textual data, making tasks that would be complex or cumbersome to achieve with standard string functions straightforward. Now, unfortunately regexes are not simple and require some learning. But once you have understood the basics, you will be able to do a lot of things with them. And quite frankly, Chat-GPT is a world champion of writing regexes once you know how to prompt it. 
+
+
+
+### `stringr` package
+In R, regexes are used together with the `stringr` package. The `stringr` package provides a cohesive set of functions designed to make working with strings as easy as possible. 
+
+The following examples take loose inspiration from [Felix Lennert's CSS Toolbox Script](https://bookdown.org/f_lennert/book-toolbox_css/digital-trace-data.html#string-manipulation). All of the functions of the `stringr` package start with `str_`. They all serve one specific purpose. Below, I explain the most frequently used functions of that package. You can put them into pipes (`%>%`/` |>`) and easily use `mutate()` to create new columns or `filter()` to filter out rows.
+
+This will be our example character string: 
+```{r}
+example_string <- "I love this class and R is fun!"
+example_string
+```
+
+
+- `str_detect()` checks if a string contains a pattern.
+```{r}
+str_detect(example_string, "love")
+```
+you could also construct an object with patterns to detect. This object is what we call a dictionary. 
+
+```{r}
+dic <- c("love", "fun")
+
+str_detect(example_string, dic)
+
+```
+
+
+- `str_count()` counts the number of matches in a string.
+```{r}
+str_count(example_string, "is")
+```
+but be careful, this indicates that it is picked up twice because "is" is also included in the word "this". If you only wanted to pick up the word "is", you would have to use the regex `\\bis\\b` which would only pick up the word "is" if it is a word on its own.
+
+```{r}
+str_count(example_string, "\\bis\\b")
+```
+
+- `str_subset()` returns the matching elements of a character vector.
+```{r}
+str_subset(example_string, "is")
+```
+
+- `str_replace()` replaces the first occurrence of a pattern in a string with something you indicate. The function is used in a way so that you first feed it your string(s), then the word that ought to be replaced and lastly by what it should be replaced: 
+```{r}
+str_replace(example_string, "is", "was")
+```
+
+- `str_replace_all()` replaces all occurrences of a pattern in a string with something you indicate. 
+```{r}
+str_replace_all(example_string, "is", "was")
+```
+
+- `str_split()` splits a string into pieces at a given pattern point. Here I specify that the string should be split into different pieces at every space bar by using the two quotation marks with a space in between `" "`: 
+```{r}
+str_split(example_string, " ")
+```
+- `str_to_lower()` converts a string to lower case.
+
+```{r}
+str_to_lower(example_string)
+```
+
+- `str_to_upper()` converts a string to upper case.
+```{r}
+str_to_upper(example_string)
+```
+ 
+- `str_trim()` removes leading and trailing whitespace from a string. Whitespace are long blank spaces between your characters that might stem from the HTML code. 
+
+```{r}
+str_trim("   I love this      class and R is fun!   ")
+```
+
+- `str_sub()` extracts and/or replaces substrings from a character vector. Here I tell R to extract the first 5 characters of the string. 
+```{r}
+str_sub(example_string, start = 1, end = 5)
+```
+and as already used in my code somewhere above, you can also index the operation from the end: 
+```{r}
+# extract strings from fourth-to-last to last character
+str_sub(example_string, start = -4, end = -1)
+
+```
+
+
+- `str_length()` returns the number of characters in a string. 
+```{r}
+str_length(example_string)
+```
+- `str_c()` concatenates strings. 
+```{r}
+str_c("I", "love", "this", "class", "and", "R", "is", "fun!")
+```
+
+## Selenium
+Work in Progress!
+
+### Dynamic Websites
+Work in Progress!
+
+## Internal Website APIs
+Work in Progress!
+
+
+
+
+
+## *Minet* [@plique_minet_2024]
+This section is a quick reference to the `minet` Python package. It is developed by the people working at the [Médialab SciencesPo](https://medialab.sciencespo.fr/). They are great people who also have a monthly seminar called the [METAT](https://medialab.sciencespo.fr/activites/metat-atelier-de-methodes/) which you can attend if you need help with coding projects. 
+
+I would like to emphasize that this is in no way my work but all the work of the people who developed the `minet` package [@plique_minet_2024]. This only serves to put your attention to their work. I would recommend you to read the [documentation of the package](https://github.com/medialab/minet) on GitHub if you want to use it for your own projects. Further, if ever you use it, please do not forget to reference them!
+
+The `minet` package is a Python package that allows you to scrape data from the web. It is a great tool to use if you want to scrape data from social media platforms such as Twitter, Facebook, Instagram, & Co. It works within your Terminal and you can relatively easily scrape a lot of data from Social Media. Go check it out! 
+
+:::{.callout-warning} 
+Please be careful when using minet. For Twitter or Instagram, you will have to be logged in to an account of these to social media to scrape them. I strongly recommend that you use burner accounts. Especially at the beginning, it happens quite easily and quickly that you get banned and will potentially lose the accounts.
+:::
+
+If you have any questions, feel free to contact me via email. 
+
+
+
+## Ethics of Webscraping
+Webscraping is a fun and extremely useful tool of Computational Social Sciences. However, it is important to remember the ethics and issues, as well as the legal aspects that come with it. I recommend that you read this section attentively and take my suggestions seriously. This is not to scare you in any way, but to make you aware of the responsabilities that we have. 
+
+Generally speaking, webscraping is not immediately illegal. However, it is important to remember that you are scraping data from a website that is not yours. This means that you are using someone else's data. It is important to respect the data *and* the website. I am no lawyer and I cannot give you any legal advice. However, I can give you some general advice on how to behave when scraping data from the web.
+
+**Purpose**: Always have a clear purpose for your webscraping project. What do you want to achieve? What is the goal of your project? What do you want to do with the data? These are all questions that you should ask yourself before you start scraping data. And then we only scrape the data that we need and we know our purpose for! 
+
+**APIs**: Always check for APIs that might be offered by the website. APIs make our life easier and we can play by the rules that the owners of the website dictate. This way we get what we want without disrespecting their rules. Now, the problem is that oftentimes there is no API or the API is not great. In that case, you might have to scrape the data yourself.
+
+
+
+**Respect the website**: Always respect the website. This means that you should not scrape the website in a way that it crashes. This is not only annoying for the website owner, but this quickly also becomes illegal. How do you crash a website? The easiest way is by sending so many requests in such a short amount of time that the server just gives in and you get a 404 error when going to valid URLs. This **we want to avoid at all costs!**. So how do we respect websites? 
+
+- **(Try to) Respect robots.txt**: The `robots.txt` file is a file that is located on the server of a website. Simply type in the root of the URL `https//:www.sciencespo.fr` and then add `robots.txt`. You will get to a text file in black with white text on it where some rules for crawlers and scrapers are specified. It tells you which parts of the website you are allowed to scrape and which parts you are not allowed to scrape. These are the rules set out by the website. But playing along the most strict rules, prohibits us from both scraping everything that we want and also from having fun. So you might have to break the rules a bit sometimes... ;)
+
+- **Check out the Terms of Service**: Some websites explicitly prohibit scraping in their terms of service (ToS). Review these terms to ensure that your scraping activities are not in violation.
+
+- **Timeouts**: If possible, make requests at a reasonable rate to avoid overwhelming the site's server. Implement delays between requests. This could for example be one request per second. If it happens to you that a website keeps blocking you for suspicious (scraping) activities, you might also want to set a timeout; preferably you set the time out at a random interval in a specific time frame. The more randomness you introduce to your scraping, the less likely you are to get detected. 
+
+**Be respectful and thoughtful of the data that you are scraping and where you store it!** Depending on the data that you are scraping, it might be more or less sensitive data. Or your data might be subject to copyright law. In itself, the collection of it is not illegal. But what you do with it (and subsequently thus also where you store it) becomes important relatively quickly. If your purpose of scraping is research, you are already on a safer side. Do not use your scraped data for any commercial purposes. My scripts are only destined for people that use scraping for research. Second, always be aware of the [GDPR](https://gdpr-info.eu/); it is the European regulation of data protection. And there are very good reasons the GDPR exists. 
+
+If you data is subject to copyright law, then be especially careful. Let's, hypothetically, assume for a moment that you wanted to scrape newspapers and construct a large corpus of articles. This is a great idea and a great project. However, you would have to be very careful with the data. Only store it **locally**, do not share it with whomever asks you for it, and watch out for what you use it later on. 
+
+When I say store data locally, this implies your local computer, an external hard drive or a USB stick. **A cloud service, especially Google Drive, is not a local and secure storing service.** Why? Because Google Drive runs on *Google's servers*. And we do not want to give indirect access to our copyrighted data to Google. [^4] The same goes for Dropbox, OneDrive, and all the other cloud services. Also sharing the data with collaborators should be done locally through hard drives and not services like WeTransfer! 
+
+The same rules apply for data that you scrape about individuals. This is sensitive data and you should be very careful with it. Anything that would make it possible to attribute anonymous data to a person is sensitive data. 
+
+[^4]: You might amend that Google probably already has the newspaper data that we might scrape. And you are probably more than right. But we do not want to get into trouble *and* we should care about these things on our end. What they do is not our business. 
+
+
+## References
+
+

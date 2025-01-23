@@ -1,0 +1,85 @@
+# Quarto & The Markdown Language
+For this class, you will be asked to hand in weekly activities. We will work on something in class and you will be given different exercises which are there to help you strengthen your R skills. After each session, you will have a couple of days to finish these exercises at home and hand them in on the Moodle page for this course. 
+
+I will not grade them on a 0 to 20 scale. I would like to see that you have done something and hopefully finished the exercise. If you are unable to finish the exercise, it is no problem and I do understand that not everybody feels as comfortable with R as some other people might do. But I would like that you all at least try to solve the exercises! Work in groups of two and try to hand in something after each session. The precise deadline will be communicated in class and/or on the Moodle page. 
+
+
+
+The best source to learn Markdown is on their website itself where they give more in depth explanations to what you can do in Markdown. Click on [this link](https://rmarkdown.rstudio.com/lesson-1.html) to find more. I will try to provide you with a general framework and a quick introduction to Markdown in R. This is by no means perfect or exhaustive. But like with R in general, play around with it, see what works and what does not, and sometimes, the right solution is just one good Google search away ;) (And if not I am more than happy to help!) Further, there is also [this website](https://www.productive-r-workflow.com/) which I recently discovered that has a more gamified and interactive approach to teaching people a productive RStudio workflow. I highly recommend that you check it out.
+
+## What are Quarto & RMarkdown?
+[Quarto](https://quarto.org/) is an open source tool that allows you to combine code, its outputs, with text in order to publish reproducible and high quality scripts and documents. You can include several (different) programming languages such as R, Python, Julia or others in either the same or single scripts. 
+
+Before quarto, Markdown was the standard. RMarkdown is a version that is specifically tailored to R. If you know how to use tools like [Obsidian](https://obsidian.md/), you might already be familiar with the Markdown syntax. Similarly to Quarto, it is a framework in which you can code in R, document your code, annotate it with text and present your research, graphs and models to others. It generates documents which are not only nice to look at but also the best way to present your quantitative work to others. Quarto acts as a more powerful wrapper around Markdown. Once you have understood the syntax, and believe me when I say that it is not tricky, you might even choose to take your notes in the Markdown format. Every Markdown document needs to be *knitted*. This will transform your text, code and the commands (which you have told R to do) into either HTML, PDF or Word documents. This is what we call the *output* of your Markdown document.
+
+In the Markdown language, you have to explain to the computer what you want it to show in the output. Unlike how we would see it in Microsoft Word or Pages, you do not have any buttons which allow you to write in italic or bold letters. You need to let R know, via certain commands that I will present to you below, what it is supposed to do with the text and code you have written.
+
+## Getting started
+In order to get started with Quarto, you first need to [install it from here](https://quarto.org/docs/get-started/). Then, you will have to open an .qmd file in RStudio. Go to the upper left corner, click on the plus sign on the white page and select Quarto document. A new document will open. It might contain some text which we will go through and you'll understand in a second. It is possible that you first have to install the R Markdown package from CRAN. To do this, run this line of code in your console:
+
+```{r, message = FALSE}
+if(!require(rmarkdown)) 
+  install.packages("rmarkdown", repos = "http://cran.us.r-project.org")
+```
+
+## Annotating text 
+Here are the most common things you might want to do with your text. These are commands that must be put before and after the words or sentences that you want to change. If you are used to coding html, this might seem familiar:
+
+- *italics* can be done with two ** in between which you put the words that should be italic
+- **bold words** follow the same principle but putting two ** in front and ** two behind your chunk of text
+- if you want to itemize or enumerate something simply use hyphens like this - or "1.", "2." etc.
+- any headers must be preceded by a #, the more # you add the smaller the header will become; this way you can add up to six different sizes of headers
+- any mathematical equations or variables can be written in LaTeX style by putting dollar signs around your text: `$y = \alpha + \beta_1*x + \epsilon$` becomes $y = \alpha + \beta_1*x + \epsilon$
+
+These commands that regard the textual output (anything that is not code in your final Markdown document) might not be that interesting for you (yet). You do not need to know how to write LaTeX equations or perfect Markdown documents. It is simply a quick walk through of what is possible. And after all, we are interested in the final code and a little less about what is italic and bold in your text...
+
+
+## Including code
+Since this is a class on coding in R, you will have to include code in your files. This can be done in two ways. You might want to include code in your text like this `data <- read_csv(data)`. This can be done by fitting two *accent grave* as you would say in French around the piece of code. When I say *accent grave* it is the thing on top of à and è. Usually when we speak about a package, a function, an argument or a line of code that we want to specifically present, we put it as a piece of code. Thus, when I speak of the `tidyverse` package or the `install.packages()` function, we put two accents grave around the words so that they appear the way they appear in this sentence.
+
+
+Or you might want to include a whole chunk of code which then gives you the result in the final output:
+
+```{r}
+x <- 2
+y <- 2
+x + y
+```
+
+
+A whole chunk can be added by either typing the chunk delimiters ` ```{r} ` and ` ``` ` in two seperate lines. It is much easier if you use your keyboard hotkeys to do that. For Mac use **Cmd + Option + I** and for Windows use **Ctrl + Alt + I **. This will automatically generate a chunk in which you can write your code. Within this field, you can write your code, run it, assign variables as you would usually do. Sometimes you might not want to include its results, or the warnings or the chunk itself. Here are the ways to do that: 
+
+- `include = FALSE` prevents code and results from appearing in the finished file. R Markdown still runs the code in the chunk, and the results can be used by other chunks.
+- `echo = FALSE` prevents code, but not the results from appearing in the finished file. This is a useful way to embed figures.
+- `message = FALSE` prevents messages that are generated by code from appearing in the finished file.
+- `warning = FALSE` prevents warnings that are generated by code from appearing in the finished.
+- `eval = FALSE` tells knitr to skip the code in the chunk, but still include the results in the finished file. You can use this if a chunk is very computationally intensive, or if you need to knit the document but the code is not working!
+
+I encourage you to use these different functions at different points. It is no problem if you do not. But for example, when we load our packages that we will need for our R script at the beginning of our code (like this `library(tidyverse)`), R generates an output in the console which will also appear in the final Markdown document. To prevent the document from showing that, we would have to add the line `include = FALSE`. It is absolutely fine if you decide to show the code and its result as it is. It might just be a longer document and a little less elegant.
+
+Even before knitting (producing the final document), you can run the chunks of code. This can be either done on the right side of the chunk by clicking on the "play button" or by simply using your keyboard hotkey that you would usually use to run code. R will immediately show you if there is an issue with your code, just like it would do if this was not a RMarkdown file. The warnings and errors are the same and the troubleshooting process would then also be the same.
+
+You are required to put the solutions to the exercises of this class in chunks of codes and discuss them outside of the chunks with some text. You will find instructions within the exercises regarding the interpretation of results or as to why you might have done something in a certain way. These comments must be put outside of the chunks of code. However, if you wish to annotate your code within the chunks, simply use the # as you would do in a normal R file. 
+
+```{r, eval = FALSE}
+data <- read_csv("data.csv")
+```
+
+
+## Knitting your document
+
+I mentioned earlier that you have to "knit" your Quarto document at the end. RStudio compiles the document for you with all the commands and codes you have written. To knit, you need to click on the icon in your top bar above your code where you can see the knitting needle and yarn. The default setting is to produce a document in html format. However, you can also have a PDF document produced that is knitted in LaTeX style. These documents are the ones you have to hand in to me on the Moodle page for this class. 
+
+However, please note that any error in your code will result in the document not being able to be knitted. This means that your code must be correct and work in order to create an html or pdf document. This is because in Markdown, most of the time, your results are displayed and based on each other, just like in any other programming. If one place doesn't work, most of the later ones won't work either. But R tells you, at the latest during the knitting process, in which line of your code the problem is. 
+
+:::{.callout-important} 
+If you want to send me your script because you have to hand in your homework or because you cannot find a solution, it might happen that your code does not work. This then also means that R cannot knit the document to an html or pdf output. In that case, the chunks of code which are creating problems must be set to `eval = FALSE` to be included but not run! This way, I can see what you have done and where the problem is while having a knitted/rendered document at the same time!
+:::
+
+
+If you have made it this far, I really hope that this quick setup tutorial for Quarto has helped you. If not, do not hesitate to get in touch and I'll try to help! I highly encourage you though to play around with it, see what works and what doesn't. Most of the time a quick Google search solves most of the problems. However, it is my job to help you, so do not hesitate to reach out!
+
+<style>body {text-align: justify}</style>
+
+
+

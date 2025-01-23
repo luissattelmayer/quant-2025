@@ -1,0 +1,34 @@
+---
+title: "Homework Session I"
+author: "your name here"
+date: today
+output:
+  html_document: default
+  pdf_document: default
+---
+
+This is the first homework you need to hand in. We will go over things which I have presented to you in class. I am trying to expose you a bit more to the Markdown format and have you recode some variables, build a linear regression model (using the OLS method) and interpret it. Please finish these exercises before the communicated deadline and hand it in on Moodle! 
+
+Put in your names in the author section of this document (put quotation signs around the name). Your final document must be written in Markdown or Quarto, the knitted output can be a pdf or an html document. It is up to you. And one last thing, annotate your code as well as you can. Either above and underneath the chunks of code or within by using the #. It helps me and you to navigate in your lines of code ;)
+
+Work in an Rrpoject environment! I do not want to see any `setwd()`. You will have to create one yourself!
+
+## Exercise 1
+Import the dataset which attached in this folder. Summarize the variables which are contained in the dataset. Please discuss three variables which you can see (and write the code to explain how you retrieved these information).
+
+
+Any abnormalities or something that stands out? Discuss it in your own words!
+
+
+## Exercise 2
+Please drop the column containing the variable “prtvtcz” and the column “rlgatnd” of your dataframe. Find a way to recode mathematically code the variable on religious attendance. It is coded backwards so that smaller values correspond to high attendance. Lastly, find a way to drop the first 50 rows.
+
+
+### Building a Linear Regression Model
+Let’s suppose we are interested in constructing a model that tests the influence of happiness, income and education on left-right self-placement. 0 on the left-right scale refers to being far-left, whereas 10 indicates that the respondent place themself on the far-right end of the scale. Summarize and interpret the coefficients of the model Discuss the other values which your regression table shows (R2, Adjusted R2 etc). You do not necessarily need to code for that Bonus Points Find a way to plot the coefficients!
+
+
+
+
+
+

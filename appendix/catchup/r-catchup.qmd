@@ -1,0 +1,308 @@
+# RStudio Catchup
+
+## Calculation
+
+We can use R as a calculator. It understands arithmetic operators such as `+, -, *, /`. You can also ask R to calculate something for you. You can either type this in your console to get the immediate output or put it in your Script which you then have to run. Console first. Now let's put it in a script:
+
+```{r}
+20 + 5
+```
+
+The output is on the right side in the console. If you want to run the code, you can either click on the `run` button in the right upper corner of the Script or you can use a hotkey on yur keyboard: `command` + `enter` in Mac or `ctrl` + `enter` in Windows. If you highlight one or more lines of code, R will only run these lines of code when using this shortcut. If you run code while the cursor is behind a specific line, it will only run this line.
+
+If we now look at the output of our calculation, we can see that there is a 1 in front of it. This is because this is the first (and only) result of our calculation. This changes according to what we tell R to do. You'll see other examples later on where there are more indices than one.
+
+If we don't want to write any code that R runs but to comment on our code, we need to put a hashtag `#` in front of the text. This "invalidates" the line for R.
+
+```{r}
+# here is my comment for this line of code
+20 + 5
+# 20 + 5
+```
+
+Notice how, the output is only appearing for the line where there is no #.
+
+In Base R, we can also find common mathematical operators like `sqrt()` or `mean()`. These are already something we call functions. It is enough to simply put the variable of which you would like to calculate the square root or the mean into these brackets to have a result.
+
+```{r}
+sqrt(2)
+mean(4)
+```
+
+You can also put an equation into the brackets:
+
+```{r}
+sqrt(2+2)
+mean(4 + 4 + 4)
+sum(4, 3, 5)
+```
+
+The functions in Base R are already quite versatile and very useful. Unfortunately, we do not have the time to go much further into detail but trust me when I say that almost all mathematical operations can be done with Base R and a lot of visualizations and statistical analyses as well. I encourage you to play around with it, if you feel like it.
+
+## Objects
+
+R is a functional programming based language, meaning that it is relying mostly on functions and logic for its coding processes. However, we store a lot of information in something we call objects This does not, however, make R an object-oriented language (If you do not know what this is, you do not have to!). Coding in R is more than simple mathematical calculations, it is working with characters, numbers, matrices, vectors etc. These things are oftentimes stored in objects. Objects have a
+
+```{r}
+seven <- 7
+seven <- "7"
+obj <- "word"
+```
+
+However, you cannot assign an object without defining it first. R will tell you that it cannot find the object.
+
+```{r, eval = FALSE}
+obj <- word
+```
+
+So let's first define the object `word` and then define it under a different name stored in the object `obj`.
+
+```{r}
+word <- "word"
+obj <- word
+```
+
+Why do we assign objects? It is usually to store some information like a dataset for example. In order to analyze data, we will need to create objects. An object is like a box that can contain anything. It has a name that we assign, we specify its contents and we also do all of this by using the assignment operator `<-`. We have already seen that the `""` are important sometimes. Anything between these, R reads as a `character`. The names of objects, names of functions, and names of arguments as well as special values such as TRUE, FALSE, NA, and NULL should NOT be in quotes. All other text should be in quotes. Numbers should never be in quotes unless you want R to treat them as text.
+
+R will also overwrite objects if you assign new content to an existing object name.
+
+```{r}
+object <- "this class is great"
+object
+```
+
+```{r}
+object <- "this class has just become really tricky"
+object
+```
+
+So sometimes, if you have been working on something for a long time. You might want to put something in a new object, similarly named than the previous one just to make sure that you do not lose any of your work. Take this seriously. Otherwise you painfully have to learn from your mistakes ;) But you will learn how to do these things more rapidly and how to rely less on objects changing throughout your code but doing all things at once. It's much more elegant. But I am getting ahead of myself.
+
+Something else that you need to know: R is case sensitive. *Object* is not the same as *object*. In fact, you could have two `objects` stored in these two different names. The conventional way of coding is to write everything in lowercase letters. Speaking of conventions: programmers do not like spaces or merged words. Use the "\_" instead when naming things (R won't let you do it)
+
+```{r}
+badobject <- "don't do this"
+good_object <- "do this instead"
+```
+
+## Functions
+
+We have already seen a function further above. R is a functional oriented programming language. We rely on functions to do the work for us which is great. Here is a list of some of the most important functions that Base R provides us with:
+
+`sqrt(), setwd(), read.csv(), View(), head(), dim(), mean(), ifelse(), table(), prop.table(), hist(), median(), sd()` `var(), plot(), abline(), cor(), lm(), c(), sample(), rnorm(), pnorm(), print(), abs(), and summary()`
+
+Some you might use on a daily basis and some I have not used myself (yet). But the more you work with R, the more you will use functions you have never used before. It is impossible to know all of them and nobody would learn them by heart. Just tell yourself that whenever you are trying to do something in R but you do not know how, somebody has probably thought of that before and there is potentially a function out there that can solve your problems.
+
+The name of a function (without quotes) is always followed by parentheses: `function_name()`. Inside the parentheses, we specify the inputs, which we refer to as arguments: `function_name(arguments)`. Most functions require that we specify at least one argument but can take many optional arguments. Some arguments are required, others are optional. When multiple arguments are specified inside the parentheses, they are separated by commas: `function_name(argument1, argument2)`
+
+## Libraries and Packages
+
+You have seen me speak of Base R a lot this far. This is that R comes with many built-in features that already are quite powerful. But many times, it has not seen efficient enough by people or sufficient enough. Thus, people create extensions. In R, they are called `packages`. These are external "libraries" of functions and datasets that do not come with Base R. They need to be installed once, sometimes updated but most importantly they need to be loaded everytime you start your script. R will tell you if it cannot find a function which is in your script and does not come with Base R. 
+
+![These are some of the most important packages we will use. They all come in these hexagonal vignettes.](rstudiopackages.png)
+
+Let's see how we can do this. If you want to install a package use the `install.packages` function:
+
+```{r, eval=FALSE}
+install.packages("tidyverse")
+```
+
+This will make a connection to the CRAN server and look for the package `tidyverse` which frankly is one of the most important ones and which you will probably have to load every time you work with R. You can do most things in Base R without using this package but it makes life so much easier. It is important that within the function, you put "" around the name of the package! Once the installation, which you can see happening in your console, is complete, you can now load it from your library:
+
+```{r}
+library(tidyverse)
+```
+
+Notice how this time you do *not* need to put "" around the name... If you want to know which pacakges are currently loaded (not installed) use `search()` in your console. If you want to know all installed packages use `library()` in your console.
+
+## Data in R, how to import it
+
+We will now turn to what we are actually interested in, when doing statistical analyses, the Data. Datasets capture the characteristics of a particular set of individuals or entities: voters, students, fish population, ... In R, datasets typically come as something we call dataframes. The technical explanation would be that a dataframe is a list of vectors that all have the same length. There are different types, we call them `class` in R, of objects that can be stored in these columns. It resembles very much a spreadsheet that you might know from Excel only that this time we need to import it or create it by hand. And if we want to manipulate it, which is actually what takes most of the time, we need to do this with functions in our script.
+
+We can start by creating a dataframe by hand. The vectors must be of the same length. Here it is a length of three. You cannot have them of different lengths. If there are values missing in some column but another one contains one, we need to put `NA` as a value. In the chunk of code below, we define the object as `df` (another convention in R tutorials it seems like) and define it with the assignment operator `<-` which we have seen above. Then, we define the different columns. `col1`, `col2` and so on are names which I chose. You could also call them `apple` and `shoe` or `gender` and `vote`. This is also an example of a function using several arguments. As explained above, you need to seperate them with a comma. Notice also how you can store different classes of values inside these columns. They can be *numeric*, *factors*, or *characters* and other but this is not important at the moment.
+
+```{r}
+df <- data.frame(col1 = 1:3, # numeric
+                 col2 = c("I", "love", "R"), # character
+                 col3 = c(TRUE, FALSE, TRUE)) # boolean
+```
+
+If we run this code, it creates an object of type dataframe in our environment. We can now check it out with some functions that are quite useful. First let's have an overview over the structure of the df. There are two ways here:
+
+```{r}
+str(df)
+glimpse(df)
+```
+
+We can also open a new window in R, which will show us the whole dataframe:
+
+```{r}
+view(df)
+```
+
+To access number of rows and columns:
+
+```{r}
+nrow(df)
+ncol(df)
+```
+
+Usually you only look at a dataframe at the beginning, if you want to understand its structure. Mostly, we are interested in the data that is stored in its columns. The `$` symbol is used to access the columns of a dataframe in R by the column name. For example, if a dataframe is named `df` and it has a column named `col1`, you can access that column by using the code `df$col1`.
+
+```{r}
+df$col3
+```
+
+We can also put this in a function and access a column within the argument of that function:
+
+```{r}
+mean(df$col1)
+```
+
+The same rules apply however. If the information stored within the columns does not allow a certain operation, R will tell you that.
+
+```{r, eval = FALSE}
+sum(df$col2)
+```
+
+### Understanding the data
+
+Rarely, however, you construct the dataframe yourself. Most of the time it is an external dataset of any sort that has been made by other people which we use for statistical analysis in R. They come in different types of files, the most frequent one is a .csv file ("comma separated values"). There is a Base R function to read these type of files, and one in the `tidyverse` package. You assign the object as usual with a name of your choice. Then you call the function that reads the type of files we are working with. Within the brackets and in quotation marks, you need to specify and tell R the path on your computer to find the file. This depends on something called the *working directory*. It is the environment on your computer where are is operating in. The working directory can be set by using the `setwd()` function. Let's set it to my desktop:
+
+```{r}
+setwd("~/Desktop/")
+```
+
+But we can also set it within a file in our personal documents. My computer is in German, so it is probably different for you. Also please be aware that this differs a bit from iOS and Windows. The different names of the path might be slightly different; the logic is the same though:
+
+```{r, eval = FALSE}
+setwd("~/Desktop/Dokumente/SciencesPo/Master Paris/M1/Semestre 1/Méthodes Quantitatives I/")
+```
+
+The easiest might be for now to simply set it to your Desktop, like demonstrated above, and put any files you want to import on your computer's Desktop.
+
+Now we can finally use the `read_csv` function in order to get the file to our R environment:
+
+```{r, eval = FALSE}
+data_1 <- read.csv("~/Courses/R Catchup/ANES.csv") # Base R
+```
+
+```{r}
+data <- read_csv("~/Desktop/Courses/R Catchup/ANES.csv") # tidyverse
+```
+
+### What does a dataset look like?
+
+Short reminder on dataframes: A dataframe in R is a table-like data structure that contains rows and columns. Each column represents a variable and each row represents an observation. The columns in a dataframe have a name and each cell of the dataframe contains a value. The values in each column must have the same type, which can be numeric, character, or logical.
+
+As we have done it before, the first thing you always do is take a look at the data and inspect it. Then we should also take a look at the different variables and summarize them using the `summary()` function.
+
+```{r}
+glimpse(data)
+view(data, n = 10)
+```
+
+Now in order to summarize variables, you follow the same logic we have used above. In order to access specify information of a dataframe, we use the dollar sign "\$". If you press the dollar sign and then wait or press the tab button on your keyboard, R will give you all the variables in your dataset from which you can then pick with the help of your arrow keys.
+
+```{r, eval = FALSE}
+sum(data$age, na.rm = TRUE)
+```
+
+### Variables
+
+In R, variables can belong to different classes, depending on the type of data they represent. The three which I will present here are the most frequent ones. There are more out there but let's just stick to these for right now:
+
+1.  **Numeric**: This class includes variables that represent numbers, such as integers and floating-point numbers. Numeric variables can be used for mathematical operations and can be plotted on a graph.
+
+```{r}
+x <- 3.14 # numeric variable
+```
+
+2.  **Character**: This class includes variables that represent text. Character variables are enclosed in quotes.
+
+```{r}
+name <- "R is great" # character variable
+```
+
+3.  **Factor**: This class includes variables that represent categorical data, such as gender or color. Factors are used to group observations based on a categorical variable. Factors are stored internally as integers and are mapped to levels, which are the possible categories.
+
+```{r}
+color <- factor(c("red", "blue", "yellow")) # factor variable
+```
+
+If you want to know what class a variable has use the `class()` function which, by the way, also gives you the classes of objects stored in your environment.
+
+```{r}
+class(data$age)
+```
+
+Now let's finally summarize some variables and inspect them
+
+```{r}
+summary(data$age)
+```
+
+```{r}
+summary(data$lib_con)
+```
+
+```{r}
+summary(data$vote)
+view(data$vote)
+```
+
+You could also write `summary(data)` which will give you all of the summaries at the same time. I gave you the single summaries first, so that we could go over them individually in class.
+
+You can also visualize these summaries by using simple Base R functions:
+
+```{r}
+hist(data$age)
+```
+
+Let's also take a boxplot into a consideration. They are great ways of understanding your data visually.
+
+```{r}
+boxplot(data$age)
+```
+
+A boxplot is a graphical representation of a dataset's or variable's distribution. It is used to depict the spread and skewness of a variable's values, and to identify outliers. The box in the middle represents the interquartile range (IQR), which is the range between the first and third quartiles (the 25th and 75th percentiles). The box represents the middle 50% of the data. The line inside the box represents the median (the 50th percentile). The "whiskers" (these plots were formerly known as box-and-whiskers plots)extend from the box to the minimum and maximum values of the data (excluding outliers). The "outliers" are plotted as individual points outside of the whiskers. These are values that fall more than 1.5 times the IQR away from the first and third quartiles. The y-axis of the plot corresponds to the variable of the data.
+
+With this information, you can get a sense of the distribution of the values in a variable. The boxplot allows you to see if the data is skewed, if there are outliers, and how spread out the data is. If the box is short, it means that the data is not spread out much and there are no outliers.
+
+These are just some examples of the basic plot functions in Base R. They can be customized using various parameters to suit your needs. It's important to keep in mind that these functions may not be the best option for all the variables, it depends on the type of data and the question that you have.
+
+## Data Management
+
+Data management is essential to any statistical analysis. It can, unfortunately, be annoying and really frustrating because R can be a tricky and stubborn interlocutor. **But** the learning curve for data management is steep and the R community has found many solutions to very complicated problems. The dataset that I am using in this example is already quite "clean". Clean refers to it not having any big chunks of missing values, the names of the variables comply with coding conventions, it does contain some NAs but not too many and the variables do not seem to contain any high values that refer to "did not answer", "does not apply" or other that we might not be interested in. It has been pre-cleaned. However, when you download datasets such as the ESS or CHES they do not come in clean formats. In fact most of the professionally used datasets out there are quite messy at first sight. They contain a lot of information and depending on your research question or simply curiosity some if it might be interesting to you while others are interested in other information.
+
+Learning data management in R is important for several reasons:
+
+1.  Data management is a crucial step in the data analysis process. It allows you to organize, clean, and prepare your data before running any statistical analysis or building any models.
+2.  R is a powerful tool for data management and manipulation. It has a wide variety of built-in functions and packages that make it easy to perform data management tasks such as filtering, grouping, and summarizing data.
+3.  Efficient data management skills allow you to work more efficiently and effectively with large and complex datasets, which is particularly important in big data analysis.
+4.  Learning data management in R also helps you to identify and handle missing or incorrect data, which is important for making accurate and reliable conclusions from the data.
+
+You will see me use a specific operator which I personally like a lot and which makes life so much easier for us: `%>%`. It comes from the `dplyr` package; so make sure it is loaded to from your library (just use the `tidyverse` package). Up until two years ago Base R did not have such a function but it was added and looks like this: `|>`. Both do more or less the same thing, Base R's function might yield some advantages but I mostly use `%>%`. In R, the keyboard shortcut for the pipe operator is **Ctrl + Shift + M** (Windows) or **Cmd + Shift + M** (Mac).
+
+The pipe is used to chain together multiple functions, making your code more readable and efficient. It allows you to pass the output from one function as the input to the next function in the chain, eliminating the need for intermediate variables. This makes the code more concise and easier to understand. For example, consider the following code where the our data is filtered based on a certain condition, grouped by another variable, and then summarized:
+
+```{r}
+data_filtered <- filter(data, age > 30)
+data_grouped <- group_by(data_filtered, education)
+data_summary <- summarize(data_grouped, mean_lib_con = mean(lib_con))
+```
+
+With the pipe operator, the same code can be written as follows:
+
+```{r}
+data_1 <- data %>% 
+  filter(age > 30) %>% 
+  group_by(education) %>% 
+  summarize(mean_lib_con = mean(lib_con))
+```
+
+This is where my small R introduction stops. You will have a lecture on Data Management and you will learn many things by setting yourself a goal of what you want to do in R (e.g. building an OLS model) and understanding which steps you need to undertake in order to do this. Ask me at any time if you have questions. For reproducibility and documentation, I will teach you how to write in RMarkdown (to produce documents such as the one you're reading right now) so that I can check your code quickly. Do not be intimidated by R! We all start small and the joy of finally making your code work is hard to match ;)
+
+```{=html}
+<style>body {text-align: justify}</style>
+```

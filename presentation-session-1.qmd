@@ -1,0 +1,175 @@
+---
+title: "Advanced RStudio Labs"
+subtitle: "Quantitative Methods II -- 2024"
+author: Luis Sattelmayer
+date: today
+format: 
+  revealjs:
+    highlight-style: breeze
+    citations-hover: true
+    bibliography: Meine Bibliothek.bib
+    slide-number: c/t
+    footer: "Advanced RStudio Labs"
+    theme: simple
+    echo: true
+    incremental: true
+    pdf-separate-fragments: false
+    self-contained: true
+---
+
+
+## Presentation {.smaller}
+:::{.nonincremental}
+- PhD candidate here at SciencesPo at the CEE under the supervision of Jan Rovny
+- BA at SciencesPo Nancy, MA in Comparative Politics at SciencesPo Paris
+- My research focuses on mainstream parties, their decline and their issue engagement with the far-right's salient issues
+- I work mainly quantitatively in R and Python, and employ methods that automate text analysis through NLP techniques and Machine Learning in general
+:::
+
+:::{.fragment .nonincremental}
+- If you wish, this course is on a first name basis: 
+  - Please call me Luis (he/him), "Dear Luis..." in emails is fine etc.
+  - I will try to remember all your names and call you by your first names if you're fine with that
+- I appreciate feedback! Let me know if something is wrong
+- Please do not hesitate to get in touch with me if you are having any problems with this class!
+:::
+
+
+## Your turn!
+- If you could put name tags in front of you for the first sessions, that would be great!
+
+:::{.fragment .nonincremental}
+1. What's your name? 
+
+2. Where are you from? 
+
+3. What are your expectations for this class?
+
+4. How comfortable are you with statistics and RStudio? 
+:::
+
+## Objectives
+::::{.columns}
+:::{.column width=50%}
+- Strengthening of your R skills
+- Exposure to applied statistics in a more advanced setting
+- Show you that R can be really fascinating (yes this is possible)
+:::
+
+:::{.column width=50%}
+![](images/r-pain.png)
+:::
+:::: 
+
+
+
+
+
+## Requirements {.smaller}
+:::{.fragment .nonincremental}
+- You obviously need... R **&** RStudio installed on your computer
+- Take notes
+:::
+
+:::{.fragment .nonincremental}
+- Ask me questions as soon as you feel lost; do it!! 
+- I am being serious
+  - I will not judge
+  - I will keep trying to give you new versions of the same answer
+:::
+
+:::{.fragment .nonincremental}
+- Attendance is, as always, mandatory!
+- And you're also required to have some fun :) 
+:::
+
+
+## Course Structure {.smaller}
+- 6 sessions à 2h, each will cover a certain topic which Jan and Brenda will have presented
+
+:::{.fragment .incremental}
+- In these lab-sessions, you will learn how to apply your theoretical knowledge to 6 topics
+  - A recap of RStudio (and the Workflow), OLS
+  - Logistic Regression
+  - Multinomial Regression
+  - Instrumental Variables & DiD
+  - RDD
+  - Time Series
+:::
+
+## Course Structure {.smaller}
+
+:::{.fragment .nonincremental}
+- Each session will be divided into two parts
+  - A recap of the theoretical concepts
+  - A practical part where we will apply these concepts in RStudio
+- I will try to have you code live but 6h is short... 
+:::
+
+:::{.fragment .nonincremental}
+- Ask questions about things you have not understood in Brenda's and Jan's class! 
+- I will cover theoretical things as well but this is supposed to be coding heavy
+:::
+
+:::{.fragment .nonincremental}
+- I include optional sections in every session for those of you who already feel a bit more at ease with R
+- I will also try to upload some scripts/extra material to my quarto book
+  - webscraping
+  - text-as-data
+  - suggest things and I will see if I have the time
+:::
+
+
+
+## Course Validation {.smaller}
+:::{.fragment .nonincremental}
+- One homework per session
+- I will start to introduce different levels of difficulty (about three)
+- You will have to choose one of these levels
+- Work in groups of two
+:::
+
+:::{.fragment .nonincremental}
+- You will have to submit your homeworks 1 week later at midnight every Thursday **on Moodle**
+- Documentation in R works via RMarkdown or Quarto; we'll talk about it in a second (pdf or html format)
+- You'll get feedback on all your homework
+:::
+
+:::{.fragment .nonincremental}
+- Validation on a 0-5 point scale
+  - it's not hard to get points
+  - having (convincingly!) tried is the easiest way of getting points
+- Not handing in anything is an issue
+:::
+
+## Office hours and help {.nonincremental}
+- There are no office hours, sorry
+- But my inbox is always open
+  - I tend to either reply quickly or not at all
+  - If no response > 48h, send the same email again; I promise I won't be offended
+- Or just intercept me when you see me on campus
+
+## Coding or Googling or ChatGPT? {.nonincremental}
+- Last year I was still talking about Stackoverflow
+- We all use ChatGPT
+  - use it intelligently though
+- There is some value in knowing how to hard code things
+  - but there is also value in knowing how to find the right code
+  - and in knowing how to adapt it to your needs
+
+
+
+## Troubleshooting and communicating with me {.smaller .nonincremental}
+- This might sound obvious but run lines one by one first
+- Google error messages/ChatGPT
+- Errors must be reproducible to be solved
+  - I am here to help, it is my job
+  - but I can only help if you provide me with enough information
+- I need:
+  - the error message
+  - the code which produced it
+
+
+
+
+

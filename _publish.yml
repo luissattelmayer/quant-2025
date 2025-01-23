@@ -1,0 +1,4 @@
+- source: presentation-session-1.qmd
+  quarto-pub:
+    - id: f3787c7b-dac1-4906-a535-10408074cc0d
+      url: 'https://luis-sattelmayer.quarto.pub/presentation-rstudio-class'
