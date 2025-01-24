@@ -24,6 +24,9 @@ book:
     - part: "Multinomial Regression"
       chapters:
         - session3/session3.qmd
+  appendices:
+    - appendix/rmarkdown.qmd
+    - appendix/webscraping.qmd
 
 
 
