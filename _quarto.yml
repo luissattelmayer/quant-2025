@@ -7,7 +7,7 @@ book:
   subtitle: "Quantitative Methods II"
   author: "Luis Sattelmayer"
   date: last-modified
-  repo-url: https://github.com/luissattelmayer/quanti-2025
+  repo-url: https://github.com/luissattelmayer/quant-2025
   sidebar:
     collapse-level: 6
     pinned: true
@@ -24,15 +24,6 @@ book:
     - part: "Multinomial Regression"
       chapters:
         - session3/session3.qmd
-    - part: "Diff-in-Diff"
-      chapters: 
-        - session4/session4.qmd
-    - part: "Regression Discontinuity Design"
-      chapters:
-        - session5/session5.qmd
-    - part: "Time Series"
-      chapters:
-        - session6/session6.qmd
 
 
 
@@ -44,8 +35,8 @@ format:
     theme: cosmo
     css: custom-styles.css
     callout-appearance: simple
-    code-block-background: true
-    code-block-border-left: "#31BAE9"
+    code-block-bg: true
+    code-block-border-left: "#00a2fa"
     highlight-style: pygments
     toc: true
     toc-location: right
