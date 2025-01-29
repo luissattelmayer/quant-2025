@@ -1,6 +1,6 @@
 ---
 title: "Advanced RStudio Labs"
-subtitle: "Quantitative Methods II -- 2024"
+subtitle: "Quantitative Methods II -- 2025"
 author: Luis Sattelmayer
 date: today
 format: 
@@ -22,7 +22,7 @@ format:
 :::{.nonincremental}
 - PhD candidate here at SciencesPo at the CEE under the supervision of Jan Rovny
 - BA at SciencesPo Nancy, MA in Comparative Politics at SciencesPo Paris
-- My research focuses on mainstream parties, their decline and their issue engagement with the far-right's salient issues
+- My research focuses on mainstream parties, their decline and what this has to do with the far-right and the politicization of immigration
 - I work mainly quantitatively in R and Python, and employ methods that automate text analysis through NLP techniques and Machine Learning in general
 :::
 
@@ -73,19 +73,17 @@ format:
 
 :::{.fragment .nonincremental}
 - Ask me questions as soon as you feel lost; do it!! 
-- I am being serious
-  - I will not judge
+- I will not judge
   - I will keep trying to give you new versions of the same answer
 :::
 
 :::{.fragment .nonincremental}
 - Attendance is, as always, mandatory!
-- And you're also required to have some fun :) 
 :::
 
 
 ## Course Structure {.smaller}
-- 6 sessions à 2h, each will cover a certain topic which Jan and Brenda will have presented
+- 6 sessions à 2h, each will cover a certain topic which Jan, Brenda, or Jessica will have presented
 
 :::{.fragment .incremental}
 - In these lab-sessions, you will learn how to apply your theoretical knowledge to 6 topics
@@ -107,7 +105,7 @@ format:
 :::
 
 :::{.fragment .nonincremental}
-- Ask questions about things you have not understood in Brenda's and Jan's class! 
+- Ask questions about things you have not understood in Brenda's, Jan's, and Jessica's class! 
 - I will cover theoretical things as well but this is supposed to be coding heavy
 :::
 
@@ -146,17 +144,16 @@ format:
 - There are no office hours, sorry
 - But my inbox is always open
   - I tend to either reply quickly or not at all
-  - If no response > 48h, send the same email again; I promise I won't be offended
+  - If no response > 48h, send the same email again; I won't be offended
 - Or just intercept me when you see me on campus
 
 ## Coding or Googling or ChatGPT? {.nonincremental}
-- Last year I was still talking about Stackoverflow
+- Usually, I would talk about Stackoverflow
 - We all use ChatGPT
   - use it intelligently though
 - There is some value in knowing how to hard code things
   - but there is also value in knowing how to find the right code
   - and in knowing how to adapt it to your needs
-
 
 
 ## Troubleshooting and communicating with me {.smaller .nonincremental}
@@ -168,8 +165,6 @@ format:
 - I need:
   - the error message
   - the code which produced it
-
-
 
 
 

@@ -56,19 +56,19 @@ library(tidyverse)
 Next we will import the dataset of grades.
 
 ```{r}
-data <- read_csv("course_grades.csv")
+ess <- read_csv("data/ess_10.csv")
 ```
 
-The path which I specify in the `read_csv` file is short as this quarto document has the same working directory to which the data set is also saved. If you, for example, have your dataset on your computer's desktop, you can access it via some code like this one:
+The path which I specify in the `read_csv()` file is short as this quarto document has the same working directory to which the data set is also saved. If you, for example, have your dataset on your computer's desktop, you can access it via some code like this one:
 
 ```{r eval = FALSE}
-data <- read_csv("~/Desktop/course_grades.csv")
+data <- read_csv("~/Desktop/ess_10.csv")
 ```
 
 Or if it is within a folder on your desktop:
 
 ```{r, eval = FALSE}
-data <- read_csv("~/Desktop/folder/course_grades.csv")
+data <- read_csv("~/Desktop/folder/ess_10.csv")
 ```
 
 :::{.callout-important} 
@@ -93,70 +93,117 @@ Let's take a first look at the data which we just imported:
 
 
 ```{r}
-# tidyverse
-glimpse(data)
-
-# Base R
-str(data)
+glimpse(ess)
 ```
 
 
-Something does not look right, this happens quite frequently when saving a csv file. It stands for *comma separated value*. R is having trouble reading this file since I have saved all grades with commas instead of points. Thus, we need to use the `read_delim()` function. Sometimes the `read_csv2()` function also does the trick. You'd be surprised by how often you encounter this problem. This is simply to raise your awareness to it!
+Although I have already filtered this dataset beforehand, I can see that there are still some variables that I am not interested in. Let's get rid of them using the `select()` function. If you put a `-` in front of a variable name, it will unselect it:
 
-The `read_delim()` function is the overall function of the `readr` package to read any sort of data file, whereas `read_csv()` and `read_csv2()` are specific functions to read csv files. The `read_delim()` function has a `delim` argument which you can use to specify the delimiter of your data file. For the sake of the example, I had purposefully saved the csv file using the `|` delimiter. 
+```{r}
+ess <- ess |> 
+  select(-c(region, accalaw, mbrncntc, fbrncntc))
+```
+
+
+For the sake of the exercise, we will filter our dataset and create a subset which only contains participating countries in eastern Europe. Let's first look at the countries that are in this dataset (what will be displayed is only half of the countries that are included in this wave)
+
+```{r}
+ess$cntry |> table()
+```
+
+We will therefore filter out countries which are in western Europe: 
+
+```{r}
+ess <- ess |> 
+  filter(cntry %in% c("BG", "CZ", "EE", "HR", "HU", "LT", "ME", "MK", "SI", "SK"))
+
+ess$cntry |> table()
+```
+
+For this exercise, I would like to predict the 
+
+Let's inspect our data for now: 
+
+```{r}
+summary(ess$gincdif)
+```
 
 
 ```{r}
-data <- read_delim("course_grades.csv", delim = "|")
-glimpse(data)
+ess <- ess |> 
+  mutate(gincdif = case_when(
+    is.na(gincdif) ~ mean(gincdif, na.rm = TRUE),
+    TRUE ~ gincdif
+  ))
+
+ess$gincdif |> summary()
 ```
 
-This time, it has been properly imported. But by looking closer at it, we can see that there are two columns in the data frame that are empty and do not even have a name. We need to get rid of these first. Here are several ways of doing this. In coding, many ways lead to the same goal. In R, some come with a specific package, some use Base R. It is up to you to develop your way of doing things.
 
-```{r, eval = FALSE}
-# This is how you could do it in Base R
-data <- data[, -c(4, 5)]
 
-# Using the select() function of the dplyr package you can drop the fourth
-# and fifth columns by their position using the - operator and the -c() to
-# remove multiple columns
-data <- data  |>  select(-c(4, 5))
-
-# I have stored the mutated data set in the old object; 
-# you can also just transform the object itself...
-data |> select(-c(4, 5))
-
-# ... or create a new one
-data_2 <- data |> select(-c(4, 5))
-```
-
-```{r, include = FALSE}
-data <- data |> select(-c(4, 5))
-```
-
+## Running a simple OLS regression
 Now that we have set up our data frame, we can build our OLS model. For that, we can simply use the `lm()` function that comes with Base R, it is built into R so to speak. In this function, we specify the data and then construct the model by using the tilde (`~`) between the dependent variable and the independent variable(s). Store your model in an object which can later be subject to further treatment and analysis.
 
-```{r}
-model <- lm(final_exam ~ midterm, data)
-summary(model)
+In this example, I will predict views on redistribution and income inequalities measured through the variable `gincdif`. This will be our *dependent variable* (DV). The exact phrasing of the question is the following: 
 
+> Using this card, please say to what extent you agree or disagree with the following statement: The govenrment should take measeures to reduce differences in income levels.
+
+  > 1. Agree strongly
+  > 2. Agree
+  > 3. Neither agree nor disagree
+  > 4. Disagree
+  > 5. Disagree strongly
+  
+I will predict this variable by a set of predictors, also called the *independent variables* (IV). While you can only have one dependent variable per regression, you can have many independent variables. The other variables will be socio-demographic variables such as age, gender, income, and religiosity of respondents. 
+
+Let's make sure that everything is properly coded:
+
+```{r}
+ess <- ess |> 
+  mutate(age = 2022 - yrbrn,
+         gndr = as.factor(gndr))
+```
+
+
+
+We can run an OLS model because this variable is *continuous*. If this were a categorical or binary dependent variable, we would have to change our modeling approach. This is something that is covered in Chapters 2 and 3.
+
+```{r}
+ess_model <- lm(gincdif ~ age + hinctnta + gndr + rlgatnd, data = ess)
+summary(ess_model)
 ```
 
 Since the `summary()` function only shows us something in our console and the output is not very pretty, I encourage you to use the `broom` package for a nicer regression table.
 
 ```{r}
-broom::tidy(model)
+broom::tidy(ess_model)
 ```
 
 You can also use the `stargazer` package in order to export your tables to text or LaTeX format which you can then copy to your documents. 
 
 ```{r}
 library(stargazer)
-stargazer(model, type = "text", out = "latex")
+stargazer(ess_model, 
+          # you can change this to latex, or html depending on your needs
+          type = "text",
+          # changing the threshold for the stars
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          # changing the label of the DV
+          dep.var.labels = "Attitudes towards economic redistribution",
+          # renaming the IVs
+          covariate.labels = c(
+            "(Intercept)" = "Intercept",
+            "age" = "Age", 
+            "hinctnta" = "Household Income",
+            "gndr2" = "Women", 
+            "rlgatnd" = "Religiosity (Attendance)"
+            )
+          )
+
 ```
 
 
-## Interpretation of OLS Results
+### Interpretation of OLS Results
 
 How do we interpret this?
 
@@ -165,46 +212,31 @@ How do we interpret this?
 -   **Residual Std. Error**: The residual standard error is a way to measure the average distance between the line you've drawn (your model's predictions) and the actual data points. It's like measuring how far off the line is from the actual dots on the graph. Another way to think about this is like a test where you want to get as many answers correct as possible and if you are off by a lot in your answers, the residual standard error would be high, but if you are only off by a little, the residual standard error would be low. So in summary, lower residual standard error is better, as it means that the model is making predictions that are closer to the true values in the data.
 -   **F Statistics**: The F-statistic is like a test score that tells you how well your model is doing compared to a really simple model. It's a way to check if the model you've built is any better than just guessing. A large F-statistic means that your model is doing much better than just guessing.
 
-## Visualizing the Regression Line
+### Visualizing the Regression Line
 Just for fun and to refresh you `ggplot` knowledge, let's visualize the regression line. Here, we specify 
 
 
 
 ```{r}
-ggplot(data, aes(x = midterm, y = final_exam)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-    labs(
-    title = "Relationship between Midterm and Final Exam Scores",
-    x = "Midterm Scores",
-    y = "Final Exam Scores"
+tidy_ess_model <- broom::tidy(ess_model, conf.int = TRUE) |> 
+  filter(!str_detect(term, "Intercept"))
+
+
+tidy_ess_model |> 
+  ggplot(aes(x = estimate, y = term, color = term)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(
+    aes(xmin = conf.low, xmax = conf.high),
+    width = 0.2,
+    position = position_dodge(width = 0.5)
   ) +
-  theme_minimal()
+  scale_color_brewer(palette = "Set1") +
+  geom_vline(xintercept = 0,
+             color = "black")
 ```
 
 
 Remember how I told you above that OLS was about finding the smallest amount of squared errors! This is what we can visualize here. The red lines are the distance from the residuals to the fitted line. The OLS line is the line that minimizes the sum of the squared errors! 
-
-```{r}
-ggplot(data, aes(x = midterm, y = final_exam)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  # highlight the OLS logic graphically
-  geom_segment(
-    aes(
-      x = midterm,
-      y = final_exam,
-      xend = midterm,
-      yend = predict(model),
-      color = "red",
-      alpha = 0.5,
-    )) +
-  labs(title = "Relationship between Midterm and Final Exam Scores",
-       x = "Midterm Scores",
-       y = "Final Exam Scores") +
-  guides(color = FALSE, alpha = FALSE) +
-  theme_minimal()
-```
 
 
 
@@ -219,26 +251,25 @@ The broom package in R is designed to bridge the gap between R's statistical out
 ### Nesting  with `nest()` {#nesting}
 Nesting in the context of the `broom` package usually refers to the idea of creating a list-column in a data frame (or even better a tibble) where each element of this list-column is itself a data frame (again, even better a tibble) or a model object. In a complex analysis, you might fit separate models to different subsets of data. Nesting allows you to store each of these models (or their broom-tidied summaries that we will see in the next three sub-sections) within a single, larger data frame (for the third time, the best is to do this with a tibble) for easier manipulation and analysis. For questions on what tibbles are see the below section on [tibbles](#tibble). 
 
-Let's go back to the midterm data which I have used before and randomly assign students into two classes (Class A or Class B) pretending that two different classes of students had taken the exams. I will then later on nest the data by class so that you can understand the logic of nesting.
+Let's go back to the ESS which I have used before. The data was collected within countries, and depends on the country context. In other -- more statistical terms -- this means that the data is *nested* within countries.
+
+I can group my observations by class using `group_by()` and then nest them within these groups. The output will only contain as many rows as we have countries, and each row will contain a tibble with the observations of the respective class. 
 
 ```{r}
-data <- data |> 
-  mutate(class = sample(c("A", "B"), size = nrow(data), replace = TRUE))
-```
-
-Now I will group my observations by class using `group_by()` and then nest them within these groups. The output will only contain two rows, class A and class B, and each row will contain a tibble with the observations of the respective class. 
-
-```{r}
-data |> 
-  group_by(class) |>
+ess |> 
+  group_by(cntry) |>
   nest()
 ```
 
 That is a very simple application of a nesting process. You can `group_by()` and `nest()` by many different variables. You might want to nest your observations per year or within countries. You can also nest by multiple variables at the same time. We will see this idea again in the next session when we will talk about the `purrr` package and how to [automatically run regressions](../session2/session2.html#automatic-regressions-for-several-countries) for several countries at the same time
 
 
-
 ### Model estimates with `tidy()`
+
+```{r}
+library(broom)
+```
+
 The `tidy()` function takes statistical output ofa model and turns it into a tidy tibble. This means each row is an observation (e.g., a coefficient in a regression output) and each column is a variable (e.g., estimate, standard error, statistic). For instance, after fitting a linear model, you can use `tidy()` to create a data frame where each row represents a coefficient, with columns for estimates, standard errors, t-values, and p-values.
 
 ### Key metrics with `glance()`
@@ -251,22 +282,25 @@ Let's take a look at how this would work out in practice. For simplicity sake, w
 
 Here I only build the same model that we have already seen above: 
 
-```{r}
-model <- lm(final_exam ~ midterm, data = data)
 
+
+```{r}
+tidy(ess_model)
 ```
 
+Now let's glance the heck out of the model: 
 
 ```{r}
-tidy(model)
-```
-
-Now let's glance the hell out of the model: 
-
-```{r}
-glance(model)
+glance(ess_model)
 ```
 Don't worry about what these things might mean for now, AIC and BIC will for example come up again next session. 
+
+
+Or augment it...
+
+```{r}
+augment(ess_model)
+```
 
 
 ### What is a tibble? {#tibble}
