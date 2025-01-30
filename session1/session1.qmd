@@ -125,7 +125,7 @@ For this exercise, I would like to predict the
 Let's inspect our data for now: 
 
 ```{r}
-summary(ess$gincdif)
+ess$gincdif |> summary()
 ```
 
 
@@ -170,6 +170,7 @@ We can run an OLS model because this variable is *continuous*. If this were a ca
 
 ```{r}
 ess_model <- lm(gincdif ~ age + hinctnta + gndr + rlgatnd, data = ess)
+
 summary(ess_model)
 ```
 
@@ -206,6 +207,25 @@ stargazer(ess_model,
 ### Interpretation of OLS Results
 
 How do we interpret this?
+
+The first thing we want to identify is the structure of the table. In the left column, we have our independent variables—our predictors. On the right-hand side, we have the corresponding coefficients, some of which have stars. In parentheses and underneath each coefficient, we find the standard errors. Smaller standard errors suggest more precise estimates.
+
+The stars tell us something about *statistical significance*. If a variable has a *p-value* below a certain threshold, it will be marked with one or more stars. A single star `*` denotes significance at the 5% level (p < 0.05), two stars `**` indicate significance at the 1% level (p < 0.01), and three stars `***` show significance at the 0.1% level (p < 0.001). This means that a specific variable has a statistically significant relationship with the dependent variable and contributes to explaining its variance. However, the absence of statistical significance does not necessarily mean that the variable has no effect—it may suggest that there is insufficient evidence to detect a meaningful relationship given the data. 
+
+The $\beta$-coefficients tell us about the direction and strength of the association between a statistically significant predictor and our dependent variable. A positive coefficient indicates that an increase in the independent variable is associated with an increase in the dependent variable, while a negative coefficient suggests that an increase in the independent variable corresponds to a decrease in the dependent variable. Since this is an ordinary least squares (OLS) regression, we can interpret the coefficients directly in their original scale. This direct interpretation holds for linear regression but does not apply to logistic regression, which we will cover in the next session.
+
+
+Let's interpret the above regression table. Always bear in mind what a change of values would correspond to on the measurement scale of your dependent variable. In our case, higher values correspond to *opposition towards redistribution*, while lower values correspond to *being in favor* of redistribution:
+
+1. **Age** is positively and significantly associated with attitudes towards economic redistribution. A one-unit increase in age corresponds to a 0.044 increase in the dependent variable, meaning older individuals tend to oppose economic redistribution more than younger ones.
+
+2. **Household income** is negatively and significantly associated with attitudes toward redistribution. A one-unit increase in income corresponds to a 0.048 decrease in opposition for redistribution. The model *seems* to indicate that richer people tend to be more in favor of redistribution.
+
+3. The coefficient for the **gender** variable suggests that women have significantly more negative attitudes towards redistribution compared to men. The coefficient size is 0.030, meaning women are slightly more opposed to redistribution.
+
+Bear in mind that this model is not a good model! It only contains four independent variables and we are likely omitting some other important predictors that would change the model outcomes substantively. It is very likely that we have a case of *Omitted Variable Bias* in our model. This is probably the worst bias to have in your model because the omission or inclusion of certain variables over others not only change your standard errors but also the direction of association of your coefficients. Hence, the admittedly extremely counterintuitive result that richer people tend to be more in favor of redistribution than lower-income households. 
+
+There are also some additional information on the table that tell us more about the model fit, its performance so to say:
 
 -   **R2**: Imagine you're trying to draw a line that best fits a bunch of dots (data points) on a graph. The R-squared value is a way to measure how well that line fits the dots. It's a number between 0 and 1, where 0 means the line doesn't fit the dots at all and 1 means the line fits the dots perfectly. R-squared tells us how much of the variation in the dependent variable is explained by the variation in the predictor variables.
 -   **Adjusted R2**: Adjusted R-squared is the same thing as R-squared, but it adjusts for how many predictor variables you have. It's like a better indicator of how well the line fits the dots compared to how many dots you're trying to fit the line to. It always adjusts the R-squared value to be a bit lower so you always want your adjusted R-squared value to be as high as possible.
