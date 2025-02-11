@@ -25,13 +25,13 @@ The variable that creates this discontinuity is called the *running variable* <!
 
 A third term that we will have to keep in mind is the *bandwidth*. In plain English, it simply means how many observations to the left and to the right of the cutoff we are going to compare. We assume that most individuals/observations that are very close to the cutoff are almost the same or at least very similar and thus comparable. The further away we get from the cutoff point the more noise is introduced and the more other and different variables might explain our outcome variable. As we will see later, the choice of bandwidth is highly important for RDDs and must be theoretically and empirically thoroughly discussed. But when is that not the case for any statistical decision that we make?
 
-So to recap: In RDDs, a running variable introduces a treatment on a continuous variable and thus creates a cutoff. The difference between the people left and right of the cutoff is therefore that one side has been treated wheras the other has not. It is important to note that this running variable is somewhat inevitable. It is hard to not turn 21 in your life assuming you make it until then. We all have turned 21 at some point.
+So to recap: In RDDs, a running variable introduces a treatment on a continuous variable and thus creates a cutoff. The difference between the people just left and right of the cutoff is therefore that one side has been treated whereas the other has not. It is important to note that this running variable is somewhat inevitable. It is hard to not turn 21 in your life assuming you make it until then. We all have turned 21 at some point.
 
 ### Once again, visualizing your data
 
-I have been preaching over and over again that it is very important that you first inspect your data and always visualize your data. RDD is actually a great use case in which visualizing the data at hand helps you identify potential discontinuities in your data.
+I have been saying over and over again that it is very important that you first inspect your data and always visualize your data. RDD is actually a great use case in which visualizing the data at hand helps you identify potential discontinuities in your data.
 
-Below I simulate both the `running_varaible` as well as our `outcome` to graphically highlight the idea of RDD. Further, the tibble also includes a binary variable that highlights whether the cutoff has taken place or not.
+Below I simulate both the `running_variable` as well as our `outcome` to graphically highlight the idea of RDD. Further, the tibble also includes a binary variable that highlights whether the cutoff has taken place or not.
 
 ```{r}
 library(tidyverse)
@@ -55,11 +55,13 @@ rbind(simulated_rdd_data_before_treatment,
   geom_point(alpha = 0.5) +
   geom_smooth(formula = y ~ x, method = "lm") +
   theme_minimal() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  scale_color_brewer(palette = "Set1")
 
 ```
 
 Above you can easily see that there is a cutoff where running variable takes on value 201. This is only simulated data and we do not measure any specific variables yet. But visually speaking, this is something you should observe in your data. I do not want to recommend data mining in any way; it is bad practice and we should work on theoretically driven models. But if you observe such a pattern in your data, maybe there is something happening at the cutoff point that deserves our causal inference and thus RDD attention...?
+
 
 ### Sharp vs. fuzzy RDD
 
@@ -214,6 +216,8 @@ To assess if the estimated effect of crossing a specific threshold (e.g., the le
 -   Varying Bandwidths: Conduct the analysis using a range of bandwidths around the cutoff point. This involves re-estimating the model with different bandwidth sizes to observe if the estimated effect significantly changes. `rdrobust()` chooses the otpimal bandwidth automatically. However, this does not mean that we should blindly trust it! If the estimated effect remains stable across a variety of bandwidths, this suggests that the findings are robust to the choice of bandwidth.
 
 -   Placebo Tests or Fake Cutoffs: Applying the same RD design to points away from the actual cutoff can serve as a placebo test. If significant effects are detected at these placebo cutoffs, it might suggest that the observed effect at the real cutoff could be due to other factors rather than the policy or intervention being studied.
+
+
 
 ### Named Entity Recognition (OPTIONAL!!!)
 

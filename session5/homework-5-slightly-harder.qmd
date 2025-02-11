@@ -1,0 +1,72 @@
+---
+title: "Homework slightly harder"
+---
+
+Let's look at a use application. This example is strongly inspired by a paper by @abou2020causal. They test to what extent the entry of Radical Right Parties (RPP) into parliament causes mainstream parties to adjust their positions. The threshold that they identify is the vote share of RPPs. By looking at parties with similar levels of voter support, but which either did or did not get into parliament, the authors compare the effects of getting elected versus not getting elected. They hypothesize that when a radical right party wins seats in parliament, this causes mainstream parties to adapt their positions. By focusing on this threshold for representation, they study the effect of the radical right’s success on mainstream parties without worrying about the influence of public opinion, which can be hard to account for in regular regression studies. 
+
+You will have to use the data that I simulated for this. Again, this follows loosely the paper, which I recommend you take a look at but the idea is simple. 
+
+# 1) Plotting the data
+Import the `mainstream_parties_simulated.csv` file which you can find in the data file of Session 5.
+
+```{r}
+library(tidyverse)
+
+data <- read_csv("data/mainstream_parties_simulated.csv")
+```
+
+
+Next, I would like you to plot the effect of the vote share of the RRP on the mainstream party positions. Find a way to plot the shift of mainstream parties. Use a `facet_wrap()` per parties and highlight the discontinuity through a line where the running variable introduces a change.
+
+
+```{r}
+data |> 
+  ggplot(aes(x = vote_share_rrp, y = shift_immigration, color = mainstream_party, fill = treatment)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ mainstream_party) +
+  theme_minimal() +
+  labs(
+    title = "Regression Discontinuity: Effect of RRP Success on Mainstream Parties",
+    x = "Radical Right Vote Share",
+    y = "Shift in Immigration Position",
+    color = "RRP in Parliament"
+  ) +
+  scale_color_brewer(palette = "Set1")
+```
+
+
+## 1.1) Describe the research design
+Is the RDD design fuzzy or sharp? 
+
+What is the treatment, what is the outcome, and what is the running variable?
+
+# 2) Running a regression
+
+Run a regression to estimate the effect of the radical right parties' success on the mainstream party positions.
+
+```{r}
+library(rdrobust)
+
+# Run the RD analysis using rdrobust
+rd_result <- rdrobust(
+  y = mainstream_parties$shift_immigration,  # Outcome variable
+  x = mainstream_parties$vote_share_rrp,     # Running variable (vote share of RRP)
+  c = 5,                                    # Threshold (cutoff) at 5% RRP vote share
+  h = 1,                                    # Bandwidth around the cutoff (adjust as needed)
+  p = 1                                     # Polynomial order (1 for linear, adjust if needed)
+)
+```
+
+
+```{r}
+rd_result |> summary()
+```
+
+
+# 3) Interpret the results
+Take the output of your RDD analysis and interpret it in your own words. This means to write something outside of the chunks of code ;) 
+
+Lastly, change the bandwidth slightly and re-interpret your results. That includes a new chunk of code, a new output of results and a new interpretation!
+
+
