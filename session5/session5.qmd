@@ -65,74 +65,10 @@ Above you can easily see that there is a cutoff where running variable takes on 
 
 ### Sharp vs. fuzzy RDD
 
-This below is a *fuzzy* RDD design! It is fuzzy because the running variable increases the probability of the treatment but does not guarantee it. This is in contrast to a *sharp* RDD where the running variable directly introduces the treatment. A *sharp* RD design occurs for variables like age for example. You can hardly escape turning 21 if you are 20 years and 364 days old. However, spending in a constituency is not a sharp RDD; it is fuzzy. It is fuzzy because the spending is not directly dependent on the vote share but rather on the vote share being above 50% but never directly at 50%. It only raises the probability of the treatment.
+We distinguish between two types of RDDs. Below you will find examples for *sharp* and *fuzzy* designs. A *sharp* RD design occurs for variables like age for example. You can hardly escape turning 21 if you are 20 years and 364 days old. However, spending in a constituency is not a sharp RDD; it is fuzzy. It is fuzzy because the spending is not directly dependent on the vote share but rather on the vote share being above 50% but never directly at 50%. It only raises the probability of the treatment. In other words: It is fuzzy because the running variable increases the probability of the treatment but does not guarantee it. This is in contrast to a *sharp* RDD where the running variable directly introduces the treatment, a sort of jump from 0 to 1.
 
 Put in formal terms, a sharp RDD is happens when the treatment is deterministic and the rate jumps from 0% to 100% at the cutoff. We are working with a fuzzy RDD when the treatment at the cutoff is not from 0 to 1 (or 100%) but rather from 0 to some value between 0 and 1.
 
-#### Fuzzy RDD example
-
-Below I simulate a *fuzzy* regression discontinuity design. I am simulating election results in 1000 constituencies. The vote share is randomly distributed around the 50% threshold. The government spending is increased if the vote share is above 50%. The spending is increased by a random noise to add variability. The idea behind this is that the government wants to reward constituencies where they have a majority but especially those where they have a very narrow majority.
-
-```{r}
-num_constituencies <- 1000
-
-# Simulating election results
-election_data <- tibble(
-  constituency = c(1:1000),
-  vote_share = runif(num_constituencies, min = 49, max = 51), # Vote share around the threshold
-  spending = rnorm(num_constituencies, mean = 100, sd = 20) # Base government spending
-)
-
-# Increase spending if vote share >= 50 (majority threshold)
-election_data <- 
-  election_data |> 
-  mutate(
-    noise = rnorm(n = num_constituencies, mean = 15, sd = 5), # Noise to add variability
-    spending = if_else(vote_share >= 50, spending + noise, spending)
-  )
-
-# Visualizing the discontinuity
-election_data |> 
-  ggplot(aes(x = vote_share, y = spending)) +
-  geom_point(alpha = 0.2) +
-  geom_smooth(
-    data = filter(election_data, vote_share < 50),
-    method = "lm",
-    color = "blue",
-    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
-  ) +
-  geom_smooth(
-    data = filter(election_data, vote_share >= 50),
-    method = "lm",
-    color = "red",
-    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
-  ) +
-  theme_minimal() +
-  labs(x = "Vote Share (%)", y = "Government Spending")
-
-# Estimating the effect of crossing the threshold
-election_data <- 
-  election_data |> 
-  mutate(majority = if_else(vote_share < 50, 0, 1))
-```
-
-```{r}
-model <- lm(spending ~ vote_share + vote_share^2, data = election_data)
-summary(model)
-```
-
-```{r}
-#| messages: wrong
-library(rdrobust)
-
-rd_result <-
-  rdrobust(y = election_data$spending,
-           x = election_data$vote_share,
-           c = 50, 
-           h = 0.2)
-
-rd_result |> summary()
-```
 
 ##### Sharp RDD
 
@@ -207,15 +143,119 @@ rdd_dui |> summary()
 
 The conventional estimate of the coefficient suggests that immediately upon crossing the age threshold of 21, there is an estimated increase of approximately 192.79 DUI arrests in the specified age bandwidth. This is a substantial effect, indicating a significant increase in DUI arrests that coincide with reaching the legal drinking age. The bias-corrected method provides a slightly higher estimate of the increase in DUI arrests, at about 207.42. This method adjusts for potential biases in the conventional estimate, potentially offering a more accurate depiction of the effect. The higher figure further emphasizes the impact of reaching the age threshold on DUI arrests. The robust estimate matches the bias-corrected estimate but accounts for potential heteroskedasticity or autocorrelation in the data, reflected in its larger standard error. This method aims to provide a more reliable estimate of the effect size, affirming the significant increase in DUI arrests but acknowledging greater uncertainty in the estimate. The robustness checks thus suggest that the effect is not sensitive to the choice of bandwidth, which is a good sign.
 
+
+#### Fuzzy RDD example
+
+Below I simulate a *fuzzy* regression discontinuity design. I am simulating election results in 1000 constituencies. The vote share is randomly distributed around the 50% threshold. It is drawn from a uniform distribution between 49% and 51% to ensure that all vote shares are near the 50% majority threshold. I make sure that in this simulation, the government spending is increased if the vote share is above 50%. The spending is increased by a random noise to add variability. The idea behind this is that the government wants to reward constituencies where they have a majority but especially those where they have a very narrow majority. 
+
+```{r}
+num_constituencies <- 1000
+
+# Simulating election results
+election_data <- tibble(
+  constituency = c(1:1000),
+  vote_share = runif(num_constituencies, min = 49, max = 51), # Vote share around the threshold
+  spending = rnorm(num_constituencies, mean = 100, sd = 20) # Base government spending
+)
+
+# Increase spending if vote share >= 50 (majority threshold)
+election_data <- 
+  election_data |> 
+  mutate(
+    noise = rnorm(n = num_constituencies, mean = 15, sd = 5), # Noise to add variability
+    spending = if_else(vote_share >= 50, spending + noise, spending)
+  )
+
+# Visualizing the discontinuity
+election_data |> 
+  ggplot(aes(x = vote_share, y = spending)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(
+    data = filter(election_data, vote_share < 50),
+    method = "lm",
+    color = "blue",
+    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
+  ) +
+  geom_smooth(
+    data = filter(election_data, vote_share >= 50),
+    method = "lm",
+    color = "red",
+    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
+  ) +
+  theme_minimal() +
+  labs(x = "Vote Share (%)", y = "Government Spending")
+
+# Estimating the effect of crossing the threshold
+election_data <- 
+  election_data |> 
+  mutate(majority = if_else(vote_share < 50, 0, 1))
+```
+
+
+Here is our RD analysis using the `rdrobust` package again. WE specify the cutoff point `c = 50` and the bandwidth of `h = 0.2`.
+
+```{r}
+#| messages: wrong
+library(rdrobust)
+
+rd_result <-
+  rdrobust(y = election_data$spending,
+           x = election_data$vote_share,
+           c = 50, 
+           h = 0.2)
+
+rd_result |> summary()
+```
+The output indicates that our estimated treatment effect is statistically significant. Both the conventional as well as the robust p-values are smaller than 0.05. Quick reminder that `P>|z|` is the column with the p-values. The results provide enough strong evidence that crossing the 50% vote share threshold significantly increases spending. If we were interpreting this in a real-world setting, we would reject the null hypothesis that government spending does change discontinuously at the majority threshold. 
+
+You might be wondering what the `rdrobust` package actually does. It makes our life easier because estimating the RD by hand using a linear model is not very straightforward. Below I show you a very simplistic way of doing it. You will see that it does not generate the same results, and I will discuss the reasons for that a bit further below. As a rule of thumb, I recommend doing all these things using the `rdrobust` package while being aware of what it does under the hood and what things to look out for. Hence, the explanation by hand at first. 
+
+To replicate the rdrobust results using lm(), we need to manually estimate a *local linear regression* with a sharp RD design. The key components to match are:
+
+- the *bandwidth* (I take the same bandwidth as above): `rdrobust` limits the data to a ±0.2 window around the threshold (vote_share = 50%)
+- the *Linear regression* (which the `rdrobust` does automatically): `rdrobust` estimates a separate local linear regression on both sides of the cutoff
+- the *treatment effect*: the coefficient of interest is the discrete jump in spending at `vote_share` = 50%
+
+Below, I filter `vote_share` to keep only observations within the ±0.2 bandwidth, `centered_vote` is cereated to emasure the distance from the threshold. And finally `majority` is the treatment dummy that takes on 1 if `vote_share` is equal or bigger than 50, otherwise it is 0.
+
+```{r}
+# Define the bandwidth
+h <- 0.2  
+
+# Subset data within ±0.2 of the threshold
+rd_data <- election_data |> 
+  filter(abs(vote_share - 50) <= h)
+
+# Create running variable centered at the threshold
+rd_data <- rd_data |> 
+  mutate(
+    centered_vote = vote_share - 50,  # Centering at the threshold
+    majority = if_else(vote_share >= 50, 1, 0) # Treatment indicator
+  )
+
+# Estimate local linear regression with interaction
+rd_model <- lm(spending ~ majority + centered_vote, data = rd_data)
+
+# Output results
+summary(rd_model)
+
+```
+Our results differ slightly from our previous ones calculated by the package. Now why don't the results of our `lm()` match those of the `rdrobust()`? There are two potential problems that the latter accounts for and that we either have not modeled or simply omitted from our linear model. First, we did not use triangular kernel weighting. This is a statistical method to weight up observations that are closer to the cutoff, and to weight down those that are further away. Second, `lm()` does not come with robust standard errors, meaning that they are not robust to any issues introduced by potential *heteroskedasticity*.
+
+
 ##### Other robustness checks to consider
 
 To assess if the estimated effect of crossing a specific threshold (e.g., the legal drinking age on DUI arrests) is robust and not sensitive to the choice of bandwidth in a Regression Discontinuity (RD) design, we can employ several robustness checks. These checks help ensure that the findings are not artifacts of particular specifications but reflect a genuine causal relationship. Here are some key strategies:
 
 -   Varying Polynomial Orders: The choice of polynomial order for fitting the regression on either side of the cutoff can influence the results. Testing the model with different polynomial orders and checking for consistency in the estimated effect size can help ensure that the results are not sensitive to this choice.
 
--   Varying Bandwidths: Conduct the analysis using a range of bandwidths around the cutoff point. This involves re-estimating the model with different bandwidth sizes to observe if the estimated effect significantly changes. `rdrobust()` chooses the otpimal bandwidth automatically. However, this does not mean that we should blindly trust it! If the estimated effect remains stable across a variety of bandwidths, this suggests that the findings are robust to the choice of bandwidth.
+-   Varying Bandwidths: Conduct the analysis using a range of bandwidths around the cutoff point. This involves re-estimating the model with different bandwidth sizes to observe if the estimated effect significantly changes. `rdrobust()` chooses the optimal bandwidth automatically. However, this does not mean that we should blindly trust it! If the estimated effect remains stable across a variety of bandwidths, this suggests that the findings are robust to the choice of bandwidth. It is crucial to demonstrate that the effect is stable across different choices of bandwidths. A common method is to visualize how the effect changes as the bandwidth varies, ranging from half to twice the optimal bandwidth size. The best case scenario would be that the Local Average Treatment Effect that you are estimating does not change much.
 
--   Placebo Tests or Fake Cutoffs: Applying the same RD design to points away from the actual cutoff can serve as a placebo test. If significant effects are detected at these placebo cutoffs, it might suggest that the observed effect at the real cutoff could be due to other factors rather than the policy or intervention being studied.
+-   Placebo Tests or Fake Cutoffs: Applying the same RD design to points away from the actual cutoff can serve as a placebo test. If significant effects are detected at these placebo cutoffs, it might suggest that the observed effect at the real cutoff could be due to other factors rather than the policy or intervention being studied. Another way to approach placebo tests would be to show that there is no effect on a number of "fake" outcomes such as a spatial or temporal variables.
+
+You also want to check for *sorting at the cutoff*. Regression discontinuity designs live and die with the fact that observations left and right of the cutoff are nearly identical and that the only thing that jumps at the cutoff is the probability of the treatment. If however our observations are somehow able to trick themselves either left or right of the cutoff, this would violate this basic assumption of RDDs. You could run a so called `McCrary` test. Or simply use @cattaneo2018manipulation estimator to check and account for these things. The package in R would be the `rddensity` package.
+
+
 
 
 
