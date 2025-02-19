@@ -1,341 +1,563 @@
-# Regression Discontinuity Design & Instrumental Variables
+---
+title: "Multinomial Regressions in R"
+author: "Luis Sattelmayer"
+Date: \today
+format:
+  pdf:
+    header-includes:
+      - \usepackage{float}
+      - \floatplacement{table}{H}
+      - \usepackage{lscape}
+          \newcommand{\blandscape}{\begin{landscape}}
+          \newcommand{\elandscape}{\end{landscape}}
+    theme: default
+---
+
+```{=html}
+<style>body {text-align: right}</style>
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+## Introduction
+
+In this script, I will show you how to construct a multinomial logistic regression in R. For this, we will work on the *European Social Survey* (ESS) again. These are the main points that are covered in this script:
+
+1.  The logic of multinomial (logistic) regressions
+2.  Advanced Data Management
+3.  Interpretation of a multinomial Model
+4.  Model Diagnostics
+5.  Goodness of Fit
+6.  APIs and Data Visualization (OPTIONAL!)
+
+## The Logic of multinomial (logistic) Regressions
+
+I have chosen four countries out of which you will be able to choose one later one when I ask you to work on some exercises. For now, I will mainly work on Germany. One of the classic applications of multinomial models in political science is the question of voting behavior, more precisely vote choice. Last week, we have seen models of a logistic regression (logit). It is used in cases when our dependent variable (DV) is binary (0 or 1; true or false; yes or no) which means that we are not allowed to use OLS. The idea of logit can be extended to *unordered categorical or nominal variables* with more than **two** categories, e.g.: Vote choice, Religion, Brands...
+
+Instead of one equation modelling the log-odds of $P(X=1)$, we do the same thing but for the amount of categories that we have. In fact, this means that a multinomial model runs several single logistic regressions on something we call a *baseline.* R will choose this baseline to which the categorical values of our DV will then relate. But we can also change it (this is called releveling). This allows us to make very interesting inferences with categorical (or ordinal) variables. If this sounds confusing, you should trust me when I tell you that this will become more straightforward in a second!
+
+However, this also makes the interpretation of these models a bit intricate and opaque at times. Nevertheless, you will see that once you have understood the basic idea of a multinomial regression and how to interpret the values in accordance to the baseline, it is not much different from logistic regressions on binary variables (and in my eyes even a bit simpler...). If the logic of logit is not 100% clear at this point, I recommend you go back to last session's script on logit and work through my explanations. And if that does not help, try to follow this lecture attentively. As I said, the logic is the same, so I will repeat myself :) And if it is still unclear, you can always ask in class or come see me after the session!
+
+But enough small talk, let's first do some data wrangling which you all probably dread at this point...
+
+## Data Management for Multinomial Regression
+
+As I have said, we will work on voting choice in four different countries. I selected Denmark and Germany. Germany I have chosen because I was working on this model a couple of months ago and Denmark is for fun.
+
+The data which we will use for this session is the 9th round of the ESS published in 2018. The goal of this session is to understand predictors that tell us more about why people vote for Populist Radical-Right Parties, henceforth called *PRRP* (Mudde 2007). For this I have two main hypotheses in mind, as well as some predictors which I know are important based on the literature. Finally we also need some control variables which we need to control for in almost any regression analysis using survey data.
+
+My two hypotheses (**H1**) and **H2**) are as follows:
+
+> **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
+>
+> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
+
+Now you might notice two things. First, my hypotheses are relatively self-explanatory and you are absolutely right. They are more than that, they are perhaps even self-evident. But to this, I would just reply that this is supposed to be an easy exercise which is supposed to expose you to a multinomial regression and the logic of it. Second, you might see that my hypotheses are relatively broadly formulated. This is because I would like you, later in class, to choose one of the countries of the 9th wave of the ESS and build a model yourselves. By giving you broad hypotheses, you can do this ;)
+
+```{r}
+# read_csv from the tidyverse package
+ess <- read_csv("ESS9e03_1.csv") |> 
+  # dplyr allows me to select only those variables I want to use later
+  select(cntry, 
+         prtvtdfr, 
+         prtvede1, 
+         prtvtddk, 
+         prtvtdpl, 
+         imueclt, 
+         yrbrn, 
+         eduyrs, 
+         hinctnta, 
+         stflife, 
+         trstplt, 
+         blgetmg, 
+         gndr) |> 
+  # based on the selected variables, I filter the dataframe so that I am only
+  # left with the data for Germany and Denmark
+  filter(cntry %in% c("DE", "DK"))
+```
+
+Again, every transformation and mutation of variables which you see below is done based on my knowledge of the dataset which I solely gained from looking at the code book. The code book can be found on the Moodle page (or the ESS' website). It is highly important that you get used to reading a code book in general but especially to familiarize yourselves with the data which you will use by looking at the way that the variables are coded **in the code book**. There, for example, you will find information on the numeric values which are stored in the variables `prtvtdfr`, `prtvede1`, `prtvtddk` and `prtvtdpl`. They all stand for a category or, in our case, a party name which you can only identify if you open the code book. You will see that I only selected some parties in the `mutate()` function below. This is more or less to get rid of those parties that did not make it into the national parliament at the last national election of each country.
+
+You have seen a similar chunk of code in the last script. See how, once you have a code that works for one dataset, you can use it again?
+
+```{r}
+# cleaning the dependent variables all over the dataframe
+ess_clean <- ess |>
+    mutate(across(where(is.numeric), ~case_when(
+           . %in% c(66, 77, 88, 99, 7777, 8888, 9999) ~ NA_integer_,
+           TRUE ~ .)),
+      prtvtdfr = replace(prtvtdfr, prtvtdfr %in% c(1, 2, 10, 12:99), NA),
+           prtvede1 = replace(prtvede1, !prtvede1 %in% c(1:6), NA),
+           prtvtddk = replace(prtvtddk, !prtvtddk %in% c(1:10), NA),
+           prtvtdpl = replace(prtvtdpl, !prtvtdpl %in% c(1:8), NA),
+           # get rid of unwanted values indicating no response etc
+           blgetmg = replace(blgetmg, !blgetmg %in% c(1:2), NA),
+           # gender recoded to 1 = 0, 2 = 1 (my personal preference)
+           gndr = recode(gndr, `1` = 0, `2` = 1))
+```
+
+In fact, you could already build the model now and start the multinomial regression. However, I add an additional data management step by placing the numeric values of the election variable in a new variable called `vote_de`, where I convert the numeric values to character values and at the same time give them the names of the parties. This will automatically transform NAs in all the rows in which the country is not that in which the person has voted.
+
+But more importantly, once I run the regression, it will display the parties' names instead of the numbers. This means that I won't have to go back to the code book every time to check what the 1s or 2s correspond to.
+
+```{r, warning=FALSE}
+# this is simple base R creating a new column/variable with character
+# values corresponding to the parties' names behind the numeric values
+ess_clean$vote_de[ess_clean$prtvede1==1]<-"CDU/CSU"
+ess_clean$vote_de[ess_clean$prtvede1==2]<-"SPD"
+ess_clean$vote_de[ess_clean$prtvede1==3]<-"Die Linke"
+ess_clean$vote_de[ess_clean$prtvede1==4]<-"Grüne"
+ess_clean$vote_de[ess_clean$prtvede1==5]<-"FDP"
+ess_clean$vote_de[ess_clean$prtvede1==6]<-"AFD"
+```
+
+Here is a way to mutate all the variables at once. However, this somehow creates conflicts with a package used further below.
+
+```{r}
+ess_clean <- ess_clean |> 
+  mutate(
+    vote_dk = case_when(prtvtddk == 1 ~ "Socialdemokratiet",
+                        prtvtddk == 2 ~ "Det Radikale Venstre",
+                        prtvtddk == 3 ~ "Det Konservative Folkeparti",
+                        prtvtddk == 4 ~ "SF Socialistisk Folkeparti",
+                        prtvtddk == 5 ~ "Dansk Folkeparti",
+                        prtvtddk == 6 ~ "Kristendemokraterne",
+                        prtvtddk == 7 ~ "Venstre",
+                        prtvtddk == 8 ~ "Liberal Alliance",
+                        prtvtddk == 9 ~ "Enhedslisten",
+                        prtvtddk == 10 ~ "Alternativet",
+                        TRUE ~ NA_character_),
+    vote_de = case_when(prtvede1 == 1 ~ "CDU/CSU",
+                        prtvede1 == 2 ~ "SPD",
+                        prtvede1 == 3 ~ "Die Linke",
+                        prtvede1 == 4 ~ "Grüne",
+                        prtvede1 == 5 ~ "FDP",
+                        prtvede1 == 6 ~ "AFD"))
+```
+
+## Constructing the Model
+
+Now that the data management process is finally over, we can specify our model. For this, you need to install the `nnet` package and load it to your library. Once this is done, we will take the exact same steps as you would do for an OLS or logit model. You specify your DV followed by a `~` and then you only need to add all your IVs. Lastly, you need to specify the data source. `Hess = TRUE` will provide us with a Hessian matrix that we need for a package later. If you don't know what that is... that is absolutely fine!
+
+```{r}
+library(nnet)
+model_de <- multinom(vote_de ~ imueclt  + stflife + trstplt + blgetmg + 
+                    gndr + yrbrn + eduyrs + hinctnta,
+                     data = ess_clean,
+                     Hess = TRUE)
+
+model_dk <- multinom(vote_dk ~ imueclt  + stflife + trstplt + blgetmg + gndr +
+                     yrbrn + eduyrs + hinctnta,
+                     data = ess_clean,
+                     Hess = TRUE)
+
+```
+
+### Re-leveling your DV
+
+In my case, the German PRRP is called *Alternative für Deutschland* meaning it starts with an "A". R tends to take the alphabetical order as a criterion for the baseline meaning that the baseline for your multinomial model is chosen based on the party which comes first in alphabetical order. Depending on what you want to show, you might want to change the baseline which we can do with the `relevel()` function. Let's say we are not interested in vote choice regarding the PRRP but conservative parties and thus want to put the German Christian conservative party, the CDU/CSU, as a baseline. Here is how we could do this in R:
+
+```{r}
+# don't run this code chunk
+#| eval: false
+# you need to specify your DV as a factor for this; further, the ref must 
+# contain the exact character label of the party
+ess_clean$vote_de <- relevel(as.factor(ess_clean$vote_de), ref = "CDU/CSU")
+```
+
+## Interpreting a Multinomial Model
+
+You already know that I like the `stargazer` package for displaying a regression table. This time I paid attention to what level of statistical significance leads to a star (\*). I changed it so that, like in the `summary()` function, p-values below 0.05 will be used as the minimum level of statistical significance instead of 0.1. `dep.var.caption =` allows be to specify a caption for our DV and we can use our own labels for the IVs instead of the variables' names by using the `covariate.labels =` argument.
+
+I have specified in the first chunk of code which arguments concern the generated output in LaTeX. I still recommend you start learning how to write papers in LaTeX. This is just to say that some arguments are not useful at all when `type = "text`. But LaTeX generates more beautiful tables ;)
+
+```{r}
+#| output: asis
+#| fig-align: center
+
+# specifying the object in which the model is stored
+stargazer::stargazer(
+  model_de,
+  # adding a title to the table
+  title = "Multinomial Regression Results Germany",
+  # change this to the desired output format; either
+  # LaTeX, html, or text (depending on your document)
+  # editor
+  type = "html",
+  # some LaTeX information
+  float = TRUE,
+  # font size of the LaTeX table
+  font.size = "small",
+  # column width in final LaTeX table
+  column.sep.width = "-10pt",
+  # specifying the p-values which lead to stars in our
+  # table
+  star.cutoffs = c(.05, .01, .001),
+  # caption for the DV
+  dep.var.caption = c("Vote Choice"),
+  # labels for our IVs; must be in the same order as our
+  # IVs in the initial model
+  covariate.labels = c(
+    "Positivity Immigration",
+    "Satisfaction w/ Life",
+    "Trust in Politicians",
+    "Ethnic Minority",
+    "Gender",
+    "Age",
+    "Education",
+    "Income"
+  )
+)
+```
+
+```{r}
+#| output: asis
+#| fig-align: center
+
+# the annotations of the above model would be the same for this model
+stargazer::stargazer(
+  model_dk,
+  title = "Multinomial Regression Results Denmark",
+  type = "html",
+  float = TRUE,
+  font.size = "tiny",
+  star.cutoffs = c(.05, .01, .001),
+  dep.var.labels = c("Germany"),
+  dep.var.caption = c("Vote Choice"),
+  covariate.labels = c(
+    "Positivity Immigration",
+    "Satisfaction w/ Life",
+    "Trust in Politicians",
+    "Ethnic Minority",
+    "Gender",
+    "Age",
+    "Education",
+    "Income"
+  )
+)
+
+```
+
+The format of the regression table on our Danish model is not ideal since the names of the parties are quite long and overlap. Blame this on my lack of knowledge of abbreviations of Danish parties...
+
+## Interpreting a Multinomial Regression Table
+
+We can see that many many things are going on in this regression table. Let us try to analyze our results step by step.
+
+First of all, we can see that we have many variables that are statistically significant (lots of stars yay!). This is always a good sign. Note also that the baseline was the party *AFD*. You can see this based on the fact that the category AFD which our DV can take on is not given in our table. This means that whenever we see the results where the DV is one of the parties, R has calculated the coefficients based on the logic that the respondent would have voter for *either* the party in the dependent variable *or* the party of the baseline, which in our case is that of the AFD. In more mathematical terms these are several single logistic regressions always with regards to the baseline AFD which are then aggregated to a multinomial regression. And to be slightly more mathematical, this means our DV is technically: $1 = DV$ and then $0 = AFD$.
+
+Therefore, we can interpret the results exactly like we would for a logistic regression. Last week it was about the likelihood of voting abstention, this week it is the likelihood of voting for the CDU/CSU instead of the AFD, or voting for the SPD instead of the AFD, or voting for Die Linke instead of the AFD, and so on. You get the idea hopefully.
+
+Remember that these are the coefficients of logistic regressions. We cannot interpret them linearily like in OLS. For now, the regression table tells us something about the statistical significance of our predictors and the direction of association: whether or not a statistically significant predictor increases or decreases the likelihood of voting for either or.
+
+### The Hypotheses
+
+As a reminder, these were my initial (frankly also bad) hypotheses:
+
+> **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
+>
+> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
+
+I am now interested to see the effect of positivity toward migration and trust in politicians *on* the vote choice for each party *instead* of the AFD. What we can see is that a one-unit increase in positive attitudes toward migration (thinking that immigrants culturally enrich the respondents' country) raises the likelihood for voting for all other parties *instead* of voting for the AFD. In the case of the first column, in which the vote was either for the CDU/CSU or the AFD, a one unit increase in stances on immigration results in a higher likelihood of voting of voting for the CDU/CSU than the AFD.
+
+If we now turn to trust in politicians and this variable's effect on vote choice for the different German parties, we can see that overall there is a statistically significant a positive association with having more trust in politicians and also voting for other parties than the AFD. In return, this also means that low trust in politicians raises the likelihood of voting for the AFD.
+
+You could obviously exponentiate the values that we have here in order to get the odds-ratio. But I have tortured you enough with ORs and predicted probabilities are much more intuitively interpreted. Therefore, we will calculate them in the next section.
+
+## Predicted Probabilities
+
+You all hopefully still remember the idea of *predicted probabilities* which we have already seen last time for a simply logistic regression. You hold all but one predictor variables (IVs) constant at their mean or another logical value. The one predictor which you do not hold constant you let alternate/vary to estimate the predicted probabilities of this specific variable of interest and the different values it can take on (on your dependent variable). The predicted probabilities can be tricky to code manually and we are not going to do this again but we will use a package that can do this for us.
+
+The package is called `MNLpred` and allows us to specify the variable of interest. This packages makes draws from our posterior distribution (hello Bayesian statistics) and simulates our coefficients n-times (we tell it how many times to run the simulation) and then takes the mean value of all of our simulations. \footnote{Since R will simulate many many things at the same time, your knit might take more time than usually. This is perfectly normal.} This way, we end up more or less with the same predicted probabilities that we have seen last week. These are much more easily interpreted than relative risk ratios (the odds-ratios of multinomial regressions) and can be plotted.
+
+```{r}
+library(MNLpred)
+pred1 <- mnl_pred_ova(
+  model = model_de,
+  # specify data source
+  data = ess_clean,
+  # specify predictor of interest
+  x = "imueclt",
+  # the steps which should be used for the simulated prediction
+  by = 1,
+  # this would be for replicability, we do not care about it
+  # here
+  seed = "random",
+  # number of simulations
+  nsim = 100,
+  # confidence intervals
+  probs = c(0.025, 0.975)
+)
+```
+
+The `pred1` object now contains the simulated means for each party at each step of our predictor of interest meaning that there are 10 simulated mean values for each value that `imueclt` can take on for each party:
+
+```{r}
+pred1$plotdata |> head()
+```
+
+Let's simulate the exact same thing for our second hypothesis regarding the trust in politicians:
+
+```{r}
+pred2 <- mnl_pred_ova(
+  model = model_de,
+  data = ess_clean,
+  x = "trstplt",
+  by = 1,
+  seed = "random",
+  nsim = 100,
+  probs = c(0.025, 0.975)
+)
+```
+
+The results, which we have both stored respectively in the objects `pred1` and `pred2` can be used for a visualization with `ggplot()`.
+
+```{r}
+library(ggplot2)
+ggplot(data = pred2$plotdata, aes(
+  x = trstplt,
+  y = mean,
+  ymin = lower,
+  ymax = upper
+)) +
+  # this gives us the confidence intervals
+  geom_ribbon(alpha = 0.1) +
+  # taking the mean of the values
+  geom_line() +
+  # here we display the predicted probabilities for all parties in one plot
+  facet_wrap(. ~ vote_de, ncol = 2) +
+  # putting the values of the y-axis in percentages
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  # the x-axis follows the 0-10 scale of the predictor
+  scale_x_continuous(breaks = c(0:10)) +
+  # specifying the ggplot theme
+  theme_minimal() +
+  # lastly you only need to label your axes; Always label your axes ;)
+  labs(y = "Predicted probabilities",
+       x = "Trust in Politicians") 
+```
+
+Here we can see very well by how many percent the likelihood increases or decreases for each party given that our independent variable, our predictor, of trust in politicians increases (increasing values mean more trust in politicians).
+
+We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: \href{https://g.co/kgs/6MxyCy}{https://g.co/kgs/6MxyCy} (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected.
+
+```{r}
+ggplot(data = pred2$plotdata, aes(
+  x = trstplt,
+  y = mean,
+  color = as.factor(vote_de)
+)) +
+  geom_smooth(aes(ymin = lower, ymax = upper), stat = "identity") +
+  geom_line() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_x_continuous(breaks = c(0:10)) +
+  scale_color_manual(
+    values = c(
+      "#03c2fc",
+      "#000000",
+      "#f26dd5",
+      "#FFFF00",
+      "#00e81b",
+      "#fa0000"
+    ),
+    name = "Vote",
+    labels = c("AFD", "CDU", "DIE LINKE", "FDP",
+               "GRUENE", "SPD")
+  ) +
+  ylab("Predicted Probability Vote") +
+  xlab("Trust in Politicians") +
+  theme_minimal()
+```
+
+This here is the plot for our first hypothesis for which we have stored the predicted probabilities in the object `pred1`:
+
+```{r}
+library(ggplot2)
+ggplot(data = pred1$plotdata, aes(
+  x = imueclt,
+  y = mean,
+  ymin = lower,
+  ymax = upper
+)) +
+  geom_ribbon(alpha = 0.1) + # Confidence intervals
+  geom_line() + # Mean
+  facet_wrap(. ~ vote_de, ncol = 2) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + # % labels
+  scale_x_continuous(breaks = c(0:10)) +
+  theme_minimal() +
+  labs(y = "Predicted probabilities",
+       x = "Positivity towards Immigrants") # Always label your axes ;)
+
+
+```
+
+And here the code which puts all the predicted probabilities in one plot:
+
+```{r}
+ggplot(data = pred1$plotdata, aes(
+  x = imueclt,
+  y = mean,
+  color = as.factor(vote_de)
+)) +
+  geom_smooth(aes(ymin = lower,
+                  ymax = upper),
+              stat = "identity") +
+  geom_line() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_x_continuous(breaks = c(0:10)) +
+  scale_color_manual(
+    values = c(
+      "#03c2fc",
+      "#000000",
+      "#f26dd5",
+      "#FFFF00",
+      "#00e81b",
+      "#fa0000"
+    ),
+    name = "Vote",
+    labels = c("AFD", "CDU", "DIE LINKE", "FDP",
+               "GRUENE", "SPD")
+  ) +
+  ylab("Predicted Probability Vote") +
+  xlab("Positivity towards Immigration")
+```
+
+## Diagnostics of Multinomial Models
+
+I have talked about diagnostics of models before. This will be the first time that we really touch upon that in models that are not linear like OLS. Usually this is a step which you should take between the building and the final interpretation of your model.
+
+The estimates of your model change depending on several influences. The number of predictors, the scaling of your predictors, the scaling of your dependent variable or the coding of your dependent variable. All these kind of things (and many more) will have an effect on your model's results. We need to be sure that we have a good amount of variables to account for enough variance. But we also need to make sure that we do not overfit our model, meaning that we put in too many predictors for example. We also need to make sure that our model is not biased by the scaling of our variables. This is why we need to check for multicollinearity, heteroskedasticity and other things.
+
+We are firstly concerned with the goodness of fit of our model. In a linear model using the OLS method, we have looked at the $R^2$ and adjusted $R^2$ of the models. This tells us something about how much variance of the DV is explained by our IVs. Unfortunately, this measure does not exist for logistic or multinomial models. But the good news is that we can calculate something that is called McFadden's Pseudo $R^2$. It is interpreted in a similar way as you would do it with a normal $R^2$ meaning that anything ranging between 0.2 and 0.4 is a result that should make us happy.
+
+This is how you do this in R:
+
+```{r}
+# you obviously need to install the package first
+library(pscl)
+pR2(model_de)
+```
+
+### Hetereoskedasticity and Multicollinearity
+
+Then there are issues of scary words like *multicollinearity* or *heteroskedasticity* (oftentimes also refered to as "heteroske-something"). These two things describe two phenomena that can skew our estimations and, in the worst case scenario, will lead to wrong inferences. Therefore, we must check for them in all different kinds of models, be it a simple model using the OLS method, or a logistic regression or a multinomial regression. There are ways to test for potential problems that might arise and also ways to work our way around them if ever we encounter them.
+
+### Multicollinearity and how to eliminate it
+
+For now, we will only look at the potential issue of multicollinearity. It occurs when your independent variables are correlated among each other. This means that they vary very similarly in their values and measure either similar things or measure things the same way. The higher the multicollinearity within your model, the less reliable are your statistical inferences.
+
+We can detect the amount and measure of (multi)collinearity by calculating the *Variance Inflation Factor* (VIF). It measures the amount of correlation between our predictors. The VIF should be below 10. If it is below 0.2, this is a potential problem. Anything below 0.1 should have us really worried. To do this in R, we use the `vif()` function of the `car` package. However, it does not work on the object of a multinomial model. Thus, we cheat our way around it and build a GLM model (`glm()`) in which we set our DV as factors and pretend that they are binomially distributed. This way, R sort of manually calculates the individual logistic regressions according to a baseline and we can calculate the VIF for the IVs individually.
+
+```{r}
+model_vif <-
+  glm(
+    as.factor(vote_de) ~ imueclt  + stflife + trstplt + blgetmg +
+      gndr + yrbrn + eduyrs + hinctnta,
+    data = ess_clean,
+    family = binomial()
+  )
+
+car::vif(model_vif)
+
+```
+
+Based on the results, we can see that our variance is not inflated since all values are below 10. That is great news! A VIF of 1 means that there is no correlation within our predictors, a VIF between 1 and 5 (which is quite normal) indicates slight correlation, and a VIF between 5 and 10 shows a strong correlation.
+
+If, however, you should encounter issues of multicollinearity, you should test the VIFs for different versions of your model by starting to drop the IV with the highest VIF and see how that affects your VIFs overall. Or you check the variables which have high values, see if theoretically speaking they measure similar things, and combine them into a single measure.
+
+It is important to do this step in order to test the validity and reliability of our models!
+
+## Goodness of Fits and its other measures
+
+You have seen me use the term goodness of fit before and that this becomes very important in quantitative research when you try to model statistical relationships. Until now, we have always only modeled one model and then interpreted its coefficients and model values. We have seen the $R^2$ and adjusted $R^2$ and we have mostly seen bad OLS models which showed very low values in both these measures. However, this measure does not always exist for generalized linear models. Thus, statisticians have come up with other ways to compare models and their *goodness of fit*. As a rule of thumb, we should always favor models which explain as much as possible by not making too many (strong) assumptions and overfitting our predictors, e.g. adding too many in one regression etc. In one of your introduction to (political) science classes, you might have heard of Ockham's razor\footnote{Feel free to google this concept. It is not essential but makes for a good analogy to goodness of fit of statistical models.}; this is the same idea but for statistical models.
+
+Goodness of fit in our case refers to how well the model which we have constructed, fits the set of our made observations. Thus, goodness of fit somewhat measures the discrepancy between our observed and expected values given our model. If we do not have an adjusted $R^2$, we need to use other information criteria to determine which model fits best our data. There is quite an abundance of criteria which come to mind. Some of them are related to specific kinds of statistical models, whereas some are more general. The two which I would like to mention here are the **AIC** and the **BIC**.
+
+### AIC (Akaike Information Criterion)
+
+Don't be like me and think for years AIC was a bad abbreviation of Akaike. It actually stands for **A**kaike **I**nformation **C**riterion. It is calculated based on the number of predictors of our model and how well it reproduces our data (the likelihood estimation). If you go back to our multinomial regressions above, you can see that the the last line of our table shows the AIC for this model. Individually, this information criterion is meaningless. It becomes important when we compare it to an AIC of a similar model and check which one indicates a better fit.
+
+What would a similar model look like? Well, if we dropped one of our IVs for example, we would alter the model a bit but keep its global structure. In that case, we would generate a second but different AIC. Comparing the AIC then tells us something about which model (meaning which composition of model) indicates a better fit.
+
+What is a better AIC? The **lower** AIC indicates that the model fits our data better than the model with the higher AIC. This is simply a mathematical measure. Stand-alone values of the AIC do not tell us much. They need to be considered in comparison to other values.
+
+### BIC (Bayesian Information Criterion)
+
+Bayesian Statistics [^session3-1] are super fascinating and I will include them wherever I can. Luckily, the BIC is very common and is to the AIC what the adjusted $R^2$ is to the $R^2$. This means that it is a "stricter" measure of goodness of fit than the AIC. It is quite similar to the AIC but differs in that it penalizes you for adding "less useful" variables to your model (potentially *overfitting* or overcomplexifing your model). Thus, similarly to the AIC, we should also favor the **lower** BIC!
+
+[^session3-1]: The second school of doing statistics. What we are doing is called *frequentist* statistics. Bayesian statistics are a bit more complicated and require a different way of thinking about statistics but they are the more intuitive way of conducting statistics (without p-values but with something you could call *certainty*). They are also more computationally expensive and thus, have only gained traction over the recent decades. They are gaining more and more popularity. If you are interested in learning more about them, I recommend the book by Richard McElreath (2016) [*Statistical Rethinking: A Bayesian Course with Examples in R and Stan*](https://github.com/rmcelreath/stat_rethinking_2024). He also has lectures on YouTube that follow the book. Definitely worth a try!
+
+## APIs and Fun Data Visualization (OPTIONAL!)
+
+In this session's optional section, I will introduce you to the logic of APIs and how to use them in R. Further, we will use data from Spotify (which we will collect through their API) to make fun data visualizations!
+
+### What is an API?
+
+API stands for *Application Programming Interface*. It is a way for two applications to communicate with each other. This is a very technical way of saying that an API allows us to carefully and *gently* collect data from a server, a website or a database. APIs are a very common way of collecting data from websites. Most websites use internal APIs to communicate with their own databases [^session3-2], whereas some websites also offer public APIs which allow you to collect data from their website.
+
+[^session3-2]: This is a fun exercise for webscraping and you can imitate the websites' calls to their server API to collect data but more on that at a later point.
+
+Think about APIs like this: You go to a restaurant and you want to eat. You could be very rude, ignore every other customer, ignore every social norm you have ever learned and go to the kitchen to tell the chef what you want. Now, if only one person did this, nothing would happen (even if I were surprised if the chef would take your order). But if now every customer did this, started yelling their order at the chef, he would probably just stop working and throw in the towel, or worse, throw you out of the restaurant. To avoid that, there are waiters and waitresses that usually come to your table, take your order, deliver that to the kitchen and once your dish is ready, you will get it to your table. Transposing this onto APIs, the waiter/waitress is our API. They make sure that we can communicate with the kitchen (the database) without disrupting the work of the chef (the server).
+
+Usually APIs are win-win situations for us and for them. They can control how much data we collect from them, they can dictate the rules and have traces of what we were doing when and where. And we can collect data without disrupting their work. However, sometimes APIs are not public and we need to find other ways to collect data from websites. This is called *webscraping* and is a bit more complicated and in the appendix.
+
+Some APIs are more useful than others. The [New York Times' one](https://developer.nytimes.com/) is unfortunately quite useless. Spotify's API is more fun, as we will see in a bit. Twitter used to have one of the best developer's accesses to their data through a wonderful API until he-who-must-not-be-named destroyed the platform. But also government websites have APIs which make it a bit more regulated to access their data.
+
+### Spotify API
+
+For the sake of the example, we will use the Spotify API to communicate with the Spotify servers and ask them for data. You usually have to sign up for an API on the respective website. If you want to reproduce my code, you will have to sign up for a Spotify API [here](https://developer.spotify.com/dashboard/login). Once you have signed up, you will be able to create a new app. This will give you a client ID and a client secret. These are your credentials to access the API. You will need them to access the API.
+
+```{r}
+#| messages: false
+
+needs('spotifyr',
+      'tidyverse',
+      'plotly',
+      'ggimage',
+      'httpuv',
+      'httr', 
+      'usethis')
+```
+
+### System Enivronments and API keys
+
+We will get a bit more technical and speak about good practices in R for a second. When you apply to an API or sign up for an access, you will usually get a sort of key, clientID or something to authenticate yourself whenever you make requests to the API. This way, they know that it is you who is making requests and that you are validated by them. This information is **sensitive**! You do not share it with anyone, and you never show this to anyone. This is why you need to store it somewhere safe. One of the options we have in R is to save them in our system environment. It is a file in which we can store these things. Honestly, the keys to APIs are really long and complicated and you do not want to type them in every time you want to use them. So, we will store them in our system environment. This is a bit more complicated than just typing them in, but it is a good practice. It is also not the safest way to do it but for simplicity's sake we will do it like this for now.
+
+::: callout-note
+If you want to follow my code and run it on your end, you will have to first sign up to the Spotify developer's portal, generate the key and clientID and come back to my script then.
+:::
+
+This line of code opens up a file called `.Renviron` in which we can store our keys. If you have never done this before, it will open up a new file. If you have done this before, it will open up the file in which you probably already have things stored.
+
+```{r}
+#| eval: false
+usethis::edit_r_environ()
+```
+
+Once you have opened the file, you can add the following lines to it. You will have to replace the `XXXX` with your own keys. Once you have done that, save the file **and restart R**! This is necessary for the changes to take effect.
+
+```{r}
+#| eval: false
+SPOTIFY_CLIENT_ID = "XXXX"
+SPOTIFY_CLIENT_SECRET = "XXXX"
+# this has to be the same localhost as in indicated in the spotify developer portal
+SPOTIFY_REDIRECT_URI = "http://localhost:1410/"
+```
+
+Now that we have added the sensitive information to our R Environment, it will remain there until we decide to delete it. If we need to load it now, we can run these lines of code:
+
+```{r}
+client_id <- Sys.getenv("SPOTIFY_CLIENT_ID")
+client_secret <- Sys.getenv("SPOTIFY_CLIENT_SECRET")
+redirect_uri <- Sys.getenv("SPOTIFY_REDIRECT_URI")
+```
+
+
+
+
 
 ```{=html}
 <style>body {text-align: justify}</style>
 ```
-
-## Causal Inference References
-
-I have mentioned some references on Causal Inference in class that I find extremely useful and that have been an inspiration to my scripts.
-
-The big ones out there that have helped me a lot are:
-
--   The Effect by @huntington-klein_effect_nodate
--   The Book of Why by @pearl_book_2018
--   The Causal Mixtape @cunningham_causal_2021
-
-## Regression Discontinuity Design
-
-This session is all about *Regression Discontinuity Design* (RDD). RDDs are useful when we have a treatment that is assigned discontinuously creating a *cutoff* or a *jump*. It creates a divide within a sample at that said cutoff and introduces a treatment. On one side, we have people (observations) which have been treated and than after/before the cutoff, people that have not been treated. Most treatments are binary, i.e. can either be 0 or 1.
-
-The variable that creates this discontinuity is called the *running variable* <!--- insert Andrew Gelman reference to 2007-->. It is sometimes also refered to as the *forcing variable* or *forcing function*. All these terms refer to the same thing however. The *cutoff* is the moment where the *running variable* introduces the treatment; for example:
-
--   If age is your running variable, turning 21 introduces the treatment of being allowed to drink
--   Barely managing to win slightly more than 50% makes a candidate get into office
-
-A third term that we will have to keep in mind is the *bandwidth*. In plain English, it simply means how many observations to the left and to the right of the cutoff we are going to compare. We assume that most individuals/observations that are very close to the cutoff are almost the same or at least very similar and thus comparable. The further away we get from the cutoff point the more noise is introduced and the more other and different variables might explain our outcome variable. As we will see later, the choice of bandwidth is highly important for RDDs and must be theoretically and empirically thoroughly discussed. But when is that not the case for any statistical decision that we make?
-
-So to recap: In RDDs, a running variable introduces a treatment on a continuous variable and thus creates a cutoff. The difference between the people just left and right of the cutoff is therefore that one side has been treated whereas the other has not. It is important to note that this running variable is somewhat inevitable. It is hard to not turn 21 in your life assuming you make it until then. We all have turned 21 at some point.
-
-### Once again, visualizing your data
-
-I have been saying over and over again that it is very important that you first inspect your data and always visualize your data. RDD is actually a great use case in which visualizing the data at hand helps you identify potential discontinuities in your data.
-
-Below I simulate both the `running_variable` as well as our `outcome` to graphically highlight the idea of RDD. Further, the tibble also includes a binary variable that highlights whether the cutoff has taken place or not.
-
-```{r}
-library(tidyverse)
-
-simulated_rdd_data_before_treatment <- 
-  tibble(
-    outcome = rnorm(200, mean = 1, sd = 1),
-    running_variable = c(1:200),
-    treatment = "before treatment"
-  ) 
-
-simulated_rdd_data_after_treatment <- 
-  tibble(outcome = rnorm(200, mean = 3, sd = 1),
-        running_variable = c(201:400),
-        treatment = "after treatment"
-  )
-
-rbind(simulated_rdd_data_before_treatment, 
-      simulated_rdd_data_after_treatment) |> 
-  ggplot(aes(x = running_variable, y = outcome, color = treatment)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(formula = y ~ x, method = "lm") +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  scale_color_brewer(palette = "Set1")
-
-```
-
-Above you can easily see that there is a cutoff where running variable takes on value 201. This is only simulated data and we do not measure any specific variables yet. But visually speaking, this is something you should observe in your data. I do not want to recommend data mining in any way; it is bad practice and we should work on theoretically driven models. But if you observe such a pattern in your data, maybe there is something happening at the cutoff point that deserves our causal inference and thus RDD attention...?
-
-
-### Sharp vs. fuzzy RDD
-
-We distinguish between two types of RDDs. Below you will find examples for *sharp* and *fuzzy* designs. A *sharp* RD design occurs for variables like age for example. You can hardly escape turning 21 if you are 20 years and 364 days old. However, spending in a constituency is not a sharp RDD; it is fuzzy. It is fuzzy because the spending is not directly dependent on the vote share but rather on the vote share being above 50% but never directly at 50%. It only raises the probability of the treatment. In other words: It is fuzzy because the running variable increases the probability of the treatment but does not guarantee it. This is in contrast to a *sharp* RDD where the running variable directly introduces the treatment, a sort of jump from 0 to 1.
-
-Put in formal terms, a sharp RDD is happens when the treatment is deterministic and the rate jumps from 0% to 100% at the cutoff. We are working with a fuzzy RDD when the treatment at the cutoff is not from 0 to 1 (or 100%) but rather from 0 to some value between 0 and 1.
-
-
-##### Sharp RDD
-
-Below, I am using an example by [Rohan Alexander](https://rohanalexander.com/) from his book [Telling Stories with Data](https://tellingstorieswithdata.com/) again. He reproduces a study by @carpenter_minimum_2015. The authors are interested in estimating the causal effect of access to alcohol on crime. They use the minimum legal drinking age (MLDA) as an instrument for access to alcohol. The idea is that the MLDA is a *sharp* running variable. You cannot escape turning 21 if you are 20 years and 364 days old. Their data is available [here](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27070).
-
-```{r}
-library(haven)
-
-carpenter_dobkin <-
-  read_dta(
-    "data/carpenter_dobkin_replication.dta"
-  )
-
-carpenter_dobkin
-```
-
-```{r}
-carpenter_dobkin_prepared <-
-  carpenter_dobkin |>
-  mutate(age = 21 + days_to_21 / 365) |>
-  select(age, assault, aggravated_assault, dui, traffic_violations) |>
-  pivot_longer(
-    cols = c(assault, aggravated_assault, dui, traffic_violations),
-    names_to = "arrested_for",
-    values_to = "number"
-  )
-
-carpenter_dobkin_prepared |>
-  mutate(
-    arrested_for =
-      case_when(
-        arrested_for == "assault" ~ "Assault",
-        arrested_for == "aggravated_assault" ~ "Aggravated assault",
-        arrested_for == "dui" ~ "DUI",
-        arrested_for == "traffic_violations" ~ "Traffic violations"
-      )
-  ) |>
-  ggplot(aes(x = age, y = number)) +
-  geom_point(alpha = 0.05) +
-  facet_wrap(facets = vars(arrested_for), scales = "free_y") +
-  theme_minimal()
-```
-
-```{r}
-carpenter_dobkin_dui_only <-
-  carpenter_dobkin_prepared |>
-  filter(
-    arrested_for == "dui",
-    abs(age - 21) < 2
-  ) |>
-  mutate(is_21_or_more = if_else(age < 21, 0, 1))
-```
-
-Below I am using the `rdrobust()` function from the `rdrobust` package to estimate the causal effect of the minimum legal drinking age on DUI arrests. The `rdrobust()` function requires the dependent variable `y`, the running variable `x`, the cutoff `c`, and the bandwidth `h`. The `all` argument is set to `TRUE` to include all robustness checks that you might want to do. Note that the choice of bandwidth is extremely important for the result and has to be empirically and theoretically grounded.
-
-```{r}
-library(rdrobust)
-rdd_dui <- rdrobust(
-  # specifies the DV
-  y = carpenter_dobkin_dui_only$number,
-  # specifies the running variable of the RDD
-  x = carpenter_dobkin_dui_only$age,
-  # specifies the cutoff
-  c = 21,
-  # specifies the bandwidth, here the unit of analysis is years
-  h = 2,
-  all = TRUE
-) 
-
-rdd_dui |> summary()
-```
-
-The conventional estimate of the coefficient suggests that immediately upon crossing the age threshold of 21, there is an estimated increase of approximately 192.79 DUI arrests in the specified age bandwidth. This is a substantial effect, indicating a significant increase in DUI arrests that coincide with reaching the legal drinking age. The bias-corrected method provides a slightly higher estimate of the increase in DUI arrests, at about 207.42. This method adjusts for potential biases in the conventional estimate, potentially offering a more accurate depiction of the effect. The higher figure further emphasizes the impact of reaching the age threshold on DUI arrests. The robust estimate matches the bias-corrected estimate but accounts for potential heteroskedasticity or autocorrelation in the data, reflected in its larger standard error. This method aims to provide a more reliable estimate of the effect size, affirming the significant increase in DUI arrests but acknowledging greater uncertainty in the estimate. The robustness checks thus suggest that the effect is not sensitive to the choice of bandwidth, which is a good sign.
-
-
-#### Fuzzy RDD example
-
-Below I simulate a *fuzzy* regression discontinuity design. I am simulating election results in 1000 constituencies. The vote share is randomly distributed around the 50% threshold. It is drawn from a uniform distribution between 49% and 51% to ensure that all vote shares are near the 50% majority threshold. I make sure that in this simulation, the government spending is increased if the vote share is above 50%. The spending is increased by a random noise to add variability. The idea behind this is that the government wants to reward constituencies where they have a majority but especially those where they have a very narrow majority. 
-
-```{r}
-num_constituencies <- 1000
-
-# Simulating election results
-election_data <- tibble(
-  constituency = c(1:1000),
-  vote_share = runif(num_constituencies, min = 49, max = 51), # Vote share around the threshold
-  spending = rnorm(num_constituencies, mean = 100, sd = 20) # Base government spending
-)
-
-# Increase spending if vote share >= 50 (majority threshold)
-election_data <- 
-  election_data |> 
-  mutate(
-    noise = rnorm(n = num_constituencies, mean = 15, sd = 5), # Noise to add variability
-    spending = if_else(vote_share >= 50, spending + noise, spending)
-  )
-
-# Visualizing the discontinuity
-election_data |> 
-  ggplot(aes(x = vote_share, y = spending)) +
-  geom_point(alpha = 0.2) +
-  geom_smooth(
-    data = filter(election_data, vote_share < 50),
-    method = "lm",
-    color = "blue",
-    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
-  ) +
-  geom_smooth(
-    data = filter(election_data, vote_share >= 50),
-    method = "lm",
-    color = "red",
-    formula = y ~ poly(x, 2) # Polynomial regression for smoother line
-  ) +
-  theme_minimal() +
-  labs(x = "Vote Share (%)", y = "Government Spending")
-
-# Estimating the effect of crossing the threshold
-election_data <- 
-  election_data |> 
-  mutate(majority = if_else(vote_share < 50, 0, 1))
-```
-
-
-Here is our RD analysis using the `rdrobust` package again. WE specify the cutoff point `c = 50` and the bandwidth of `h = 0.2`.
-
-```{r}
-#| messages: wrong
-library(rdrobust)
-
-rd_result <-
-  rdrobust(y = election_data$spending,
-           x = election_data$vote_share,
-           c = 50, 
-           h = 0.2)
-
-rd_result |> summary()
-```
-The output indicates that our estimated treatment effect is statistically significant. Both the conventional as well as the robust p-values are smaller than 0.05. Quick reminder that `P>|z|` is the column with the p-values. The results provide enough strong evidence that crossing the 50% vote share threshold significantly increases spending. If we were interpreting this in a real-world setting, we would reject the null hypothesis that government spending does change discontinuously at the majority threshold. 
-
-You might be wondering what the `rdrobust` package actually does. It makes our life easier because estimating the RD by hand using a linear model is not very straightforward. Below I show you a very simplistic way of doing it. You will see that it does not generate the same results, and I will discuss the reasons for that a bit further below. As a rule of thumb, I recommend doing all these things using the `rdrobust` package while being aware of what it does under the hood and what things to look out for. Hence, the explanation by hand at first. 
-
-To replicate the rdrobust results using lm(), we need to manually estimate a *local linear regression* with a sharp RD design. The key components to match are:
-
-- the *bandwidth* (I take the same bandwidth as above): `rdrobust` limits the data to a ±0.2 window around the threshold (vote_share = 50%)
-- the *Linear regression* (which the `rdrobust` does automatically): `rdrobust` estimates a separate local linear regression on both sides of the cutoff
-- the *treatment effect*: the coefficient of interest is the discrete jump in spending at `vote_share` = 50%
-
-Below, I filter `vote_share` to keep only observations within the ±0.2 bandwidth, `centered_vote` is cereated to emasure the distance from the threshold. And finally `majority` is the treatment dummy that takes on 1 if `vote_share` is equal or bigger than 50, otherwise it is 0.
-
-```{r}
-# Define the bandwidth
-h <- 0.2  
-
-# Subset data within ±0.2 of the threshold
-rd_data <- election_data |> 
-  filter(abs(vote_share - 50) <= h)
-
-# Create running variable centered at the threshold
-rd_data <- rd_data |> 
-  mutate(
-    centered_vote = vote_share - 50,  # Centering at the threshold
-    majority = if_else(vote_share >= 50, 1, 0) # Treatment indicator
-  )
-
-# Estimate local linear regression with interaction
-rd_model <- lm(spending ~ majority + centered_vote, data = rd_data)
-
-# Output results
-summary(rd_model)
-
-```
-Our results differ slightly from our previous ones calculated by the package. Now why don't the results of our `lm()` match those of the `rdrobust()`? There are two potential problems that the latter accounts for and that we either have not modeled or simply omitted from our linear model. First, we did not use triangular kernel weighting. This is a statistical method to weight up observations that are closer to the cutoff, and to weight down those that are further away. Second, `lm()` does not come with robust standard errors, meaning that they are not robust to any issues introduced by potential *heteroskedasticity*.
-
-
-##### Other robustness checks to consider
-
-To assess if the estimated effect of crossing a specific threshold (e.g., the legal drinking age on DUI arrests) is robust and not sensitive to the choice of bandwidth in a Regression Discontinuity (RD) design, we can employ several robustness checks. These checks help ensure that the findings are not artifacts of particular specifications but reflect a genuine causal relationship. Here are some key strategies:
-
--   Varying Polynomial Orders: The choice of polynomial order for fitting the regression on either side of the cutoff can influence the results. Testing the model with different polynomial orders and checking for consistency in the estimated effect size can help ensure that the results are not sensitive to this choice.
-
--   Varying Bandwidths: Conduct the analysis using a range of bandwidths around the cutoff point. This involves re-estimating the model with different bandwidth sizes to observe if the estimated effect significantly changes. `rdrobust()` chooses the optimal bandwidth automatically. However, this does not mean that we should blindly trust it! If the estimated effect remains stable across a variety of bandwidths, this suggests that the findings are robust to the choice of bandwidth. It is crucial to demonstrate that the effect is stable across different choices of bandwidths. A common method is to visualize how the effect changes as the bandwidth varies, ranging from half to twice the optimal bandwidth size. The best case scenario would be that the Local Average Treatment Effect that you are estimating does not change much.
-
--   Placebo Tests or Fake Cutoffs: Applying the same RD design to points away from the actual cutoff can serve as a placebo test. If significant effects are detected at these placebo cutoffs, it might suggest that the observed effect at the real cutoff could be due to other factors rather than the policy or intervention being studied. Another way to approach placebo tests would be to show that there is no effect on a number of "fake" outcomes such as a spatial or temporal variables.
-
-You also want to check for *sorting at the cutoff*. Regression discontinuity designs live and die with the fact that observations left and right of the cutoff are nearly identical and that the only thing that jumps at the cutoff is the probability of the treatment. If however our observations are somehow able to trick themselves either left or right of the cutoff, this would violate this basic assumption of RDDs. You could run a so called `McCrary` test. Or simply use @cattaneo2018manipulation estimator to check and account for these things. The package in R would be the `rddensity` package.
-
-
-
-
-
-### Named Entity Recognition (OPTIONAL!!!)
-
-**This is still work in Progress!**
-
-This is the first time we are really entering the realm of text-as-data methods. The web scraping script in the appendix is actually the first preliminary stage, but this is the first time we will really work with textual statistics. I must have mentioned a few times in class that this part of quantitative methods fascinates me the most and I use them on a daily basis. Unfortunately, I won't have the time to give you a great introduction to it. With a bit of luck, I will write a script in the appendix as an introduction to text-as-data. If that doesn't work out, you are more than welcome to come to the course Malo and I are organizing on Computational Social Sciences between the 3rd and 4th semester in January 2025!
-
-In this tutorial I will introduce you to *Named Entity Recognition* (NER). NER is a task from the field of *Natural Language Processing* (NLP). It is about detecting entities in texts and classifying them according to certain categories. These entities can be places, organizations, persons/names, data or miscellaneous. Strictly speaking, there are two NLP tasks that NER can perform for us: firstly, detecting entities in texts and then, in a second step, classifying them according to predefined categories.
-
-As is so often the case with NLP tasks, this method also works with pre-trained models. There are many NER models, but this script will deal with [spaCy](https://spacy.io/); simply because there is an R package for it. NER models are pretrained in the sense that they have seen a human annotated corpus of text before, where the entities have all been detected and classified by hand. In short, the model learns what to look for and what to classify and how once it has been found. These models can be refined later, but for this tutorial we will work with off-the-shelf models as provided by the developers.
-
-#### Installation of spaCy
-
-First, we need to install the `spacyr` package. This package is an R wrapper for the spaCy NLP library which is usually running in Python. And as a general disclaimer, this might be tricky step -- after this, everything will be easy. To be able to do NER in R, we will have to do three things:
-
-1.  Install Python on your computer
-2.  Install the `reticulate` package in R
-3.  Install the `spacyr` package in R
-
-As we need to have a Python environment running, we will have to install Python on your computer first. You can download Python [here](https://www.python.org/downloads/). Download the latest version of Python and install it. Next, you will have to install the `reticulate` library in R; here is an [in-depth tutorial](https://github.com/rstudio/reticulate) on how to do this. Here is the next thing, you might want to take a look at which is the `spacyr` library. You can find the documentation [here](https://spacyr.quanteda.io/). For a tutorial on how to use it (that does not necessarily go beyond the documentation), you can check out [this blog post](https://cran.r-project.org/web/packages/spacyr/vignettes/using_spacyr.html).
-
-If you managed to install all three things, these lines of code should run smoothly:
-
-```{r}
-#| eval: false
-
-library(reticulate)
-library(spacyr)
-```
-
-#### Installation of spaCy models
-
-As I mentioned above, Named Entity Recognition relies on pre-trained models that have been trained on a human annotated corpus. These models are not part of the `spacyr` package, but you can download them from the spaCy website. The `spacyr` package provides a function to download these models. You can download the English model with the following code:
-
-#### What is a corpus?
-
-Before we start, a few words about the corpus we will be working with. We will use the *State of the Union corpus*, which comes with the `quanteda` package. `quanteda` is one of the leading and most important packages in R when it comes to textual statistics. I won't spend much time explaining the idea of corpora, but here are a few key points:
-
-To use any TaDa methods, we must construct a corpus. You could compare it to the sampling we do from a population of interest. Generally speaking your corpus can be anything as long as it makes sense (very broad statement, I know) but it should at least be useful depending on your dependent variable or guiding research question. A corpus is never value free. This is a key-point. The written text of a society is a certain reflection of society itself. This means that marginalized groups of any given society are also very likely to be marginalized in text. Textual data captures societal structure (structuralism and so on...). We must care about ethics! A corpus must be validated (and validated, and validated again). Ideally we should have the *entirety* of a corpus. In our example, we are looking at the State of the Union addresses. This is a very specific corpus. We could also look at all speeches by a certain president, all speeches by a certain party, all speeches of a certain type (inaugural addresses, farewell addresses, etc.). But you should definitely justify why we are looking at this specific corpus, this specific set of speeches. Exhaustiveness might be a good rule of thumb. Why stop at only looking at the SOTU from the 1970s on?
-
-#### How to construct a corpus?
-
-We can always do things by hand…
-
-… or we automate it ;) For this I recommend that you go check out the appendix chapter on webscraping but let me tell you that the beautiful Internet is full of corpora which are waiting to be retrieved (scraped), cleaned, and used for text as data! Some might already be available. Party manifestos can be retroengineered from the [Comparative Manifesto Project](https://manifesto-project.wzb.eu/). The [State of the Union corpus](https://rdrr.io/github/quanteda/quanteda.corpora/man/data_corpus_sotu.html) is available within the `quanteda` package. Plenty of parliamentary speeches can be found [here](https://www.clarin.eu/resource-families/parliamentary-corpora).
-
-But you can get as creative as you want! You can scrape entire newspaper archives or other digital trace data from the web. Or let's say you are interested in lyrics of songs. Why not scrape <https://genius.com/>? Any text that is available on the web can be scraped and used as a corpus!
-
-#### United Nations corpus
-
-Load both the `reticulate` and the `spacyr` library to your environment.
-
-```{r}
-library(spacyr)
-library(reticulate)
-```
-
-Next, we are going to initialize the spaCy session. R will go look for a python environment installed on your computer that it can use to do our NER. You need to specify which spaCy model you would like to use in your session.
-
-```{r}
-#| eval: false
-spacy_initialize(model = "en_core_web_lg")
-```
-
-It reads as follows: `en_` indicates that we are working with a model trained on English text, and `core_` means that it could technically detect more than just entities, `web_` means that it was trained on web text, and `lg` means that it is a large model. Other available models in English are `en_core_web_sm` (small model) and `en_core_web_md` (medium model). The bigger the model, the better the accuracy of the NER. [^session5-1] If you want to use a different model, you can check out this [list](https://spacy.io/models) here of the official spaCy website and see whether your language of interest is available. [^session5-2]
-
-[^session5-1]: There is technically also a `en_core_web_trf` model which is a so-called transformer model. This model is not available in the `spacyr` package and we would have to use it in Python. In my experience so far, the large model suffices for most purposes!
-
-[^session5-2]: Otherwise, you can always try to find a model on [huggingface.co](huggingface.co). In that case, you will have to code in Python though.
-
-You always have to finalize your spacy session at the end!
-
-```{r}
-#| eval: false
-spacy_finalize()
-```
-
-## References
-
-::: {#refs}
-:::
