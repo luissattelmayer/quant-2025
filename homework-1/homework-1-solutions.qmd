@@ -1,0 +1,107 @@
+---
+title: "Homework Session I Solutions"
+date: today
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Exercise 1
+Import the dataset which attached in this folder. 
+
+```{r}
+ess <- haven::read_dta(here::here("homework-1/ESS_CZ.dta"))
+```
+
+
+Summarize three variables of your choice which are contained in the dataset. 
+
+Please discuss these three variables which you can see (and write the code to explain how you retrieved these information).
+
+Any abnormalities or something that stands out? Discuss it in your own words!
+
+```{r}
+summary(ess)
+```
+
+
+## Exercise 2
+Please drop the column containing the variable `prtvtcz` and the column `euftf` of your dataframe. 
+
+
+
+Next, find a way to mathematically recode the variable on religious attendance. It is coded backwards so that smaller values correspond to high attendance. 
+
+```{r}
+ess <- ess |> 
+  select(-c(prtvtcz, euftf)) |>
+  mutate(rlgatnd = (8 - rlgatnd)*-1, 
+         eduyrs = case_when(
+           eduyrs <= 10 ~ eduyrs,
+           TRUE ~ NA_integer_
+         )) |> 
+  slice(51:n())
+```
+
+
+Lastly, find a way to drop the first 50 rows.
+
+
+### Building a Linear Regression Model
+Let’s suppose we are interested in constructing a model that tests the influence of *happiness*, *income* and *education* **on** *left-right self-placement*. 0 on the left-right scale refers to being far-left, whereas 10 indicates that the respondent place themself on the far-right end of the scale. 
+
+
+```{r}
+ess_model <- lm(lrscale ~ happy + hinctnt + eduyrs, data = ess)
+```
+
+
+Build this model in R and display the regression table.
+
+```{r}
+library(stargazer)
+stargazer(
+  ess_model,
+  type = "text", 
+  star.cutoffs = c(0.05, 0.01, 0.001))
+```
+
+
+Summarize and interpret the coefficients of the model (your text should be written outside of the code chunks!).
+
+
+```{r}
+ess_model_coefficients <- ess_model |> 
+  broom::tidy(se = TRUE)
+
+ess_model_coefficients |> 
+  filter(term != "(Intercept)") |>
+  ggplot(aes(x = term, y = estimate, color = term)) +
+  geom_point() +
+geom_errorbar(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), width = 0.2) +
+  coord_flip() +
+  labs(
+    title = "Coefficients of the Linear Regression Model",
+    x = "Coefficient",
+    y = "Estimate"
+  ) +
+  theme(
+    axis.text.y = element_text(size = 8)
+    ) +
+  scale_color_brewer(palette = "Set1") +
+  geom_hline(yintercept = 0,
+             color = "black", 
+             linetype = "dashed")
+```
+
+
+Discuss the other values which your regression table shows (R2, Adjusted R2 etc). 
+
+
+Bonus Points: Plot the coefficients!
+
+
+
+
+
+
