@@ -35,10 +35,10 @@ Next, find a way to mathematically recode the variable on religious attendance. 
 ```{r}
 ess <- ess |> 
   select(-c(prtvtcz, euftf)) |>
-  mutate(rlgatnd = (8 - rlgatnd)*-1, 
-         eduyrs = case_when(
-           eduyrs <= 10 ~ eduyrs,
-           TRUE ~ NA_integer_
+  mutate(rlgatnd = 8 - rlgatnd, 
+         yrbrn = case_when(
+           yrbrn == 9999 ~ NA_integer_,
+           TRUE ~ yrbrn
          )) |> 
   slice(51:n())
 ```
