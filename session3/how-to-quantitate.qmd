@@ -1,0 +1,223 @@
+---
+title: "How to write a quantitative paper"
+subtitle: "Quantitative Methods II -- 2025"
+author: Luis Sattelmayer
+date: today
+format: 
+  revealjs:
+    highlight-style: breeze
+    citations-hover: true
+    slide-number: c/t
+    footer: "Advanced RStudio Labs"
+    bibliography: biblio-session-3.bib
+    theme: simple
+    echo: true
+    incremental: true
+    pdf-separate-fragments: false
+    self-contained: true
+---
+
+## Outline
+1. Structure of quantitative papers
+2. Finding a research question and hypotheses
+3. Data collection
+4. Data analysis
+5. Writing the paper
+6. What makes a good paper a great paper?
+
+
+## Opening comments
+- There is no gold standard or perfect way of doing this
+- There are conventions in international quantitative research
+  - Not necessarily the best way of doing things but a guideline
+  
+- All of these slides are *recommendations* and *guidelines*
+- Some are more important or stronger than others (some are flexible and I will try to highlight it)
+
+
+
+## Structure
+- Convergence to a universal structure in international journals
+
+1. Introduction
+2. Literature review
+3. Theory
+4. Data & Methods
+5. Results
+6. Discussion/Conclusion
+
+
+
+## Structure 1/6
+
+1. **Introduction**
+- A hook at the beginning (1 paragraph)
+- Brief literature review (1-2 paragraphs)
+- Your theory and argument (1-2 paragraphs) --> what question does this respond to?   - formulate your question in one way or another
+- what are your results? (1 paragraph)
+- how is the paper structured? (1 paragraph)
+
+
+## Structure 1/6
+
+2. **Literature Review** 
+
+- Look at this paper: @knopf2006doing
+- Think about it as a funnel
+- Write a synthesis of the big strands of literature
+  - what are the main arguments and common approaches/foci?
+  - what are the main findings?
+  - what are the main disagreements?
+
+
+
+## Structure 2/6 {.smaller}
+2. **Literature Review**
+
+- It should concisely summarize the findings or claims that have emerged from prior research efforts on a subject
+- A literature review should reach a conclusion about how accurate and complete that knowledge is
+- It should present your considered judgments about what’s right, what’s wrong, what’s inconclusive, and what’s missing in the existing literature
+
+- Think about it as you are giving the reader (me in that case) a road map of things they need to know about your topic before they are able to engage with your arguments
+  - what do they need to understand beforehand?
+  - where does your argument come in?
+
+
+## Structure 3/6 {.smaller}
+3. **Theory**
+- Explains *why* we should expect a particular relationship between variables
+- Develops a logical argument that connects concepts to hypotheses
+- Moves beyond summarizing existing literature to offering your own theoretical contribution
+- In reality, this section might be merged with the literature review
+- "Cut through the literature"
+  
+## Structure 3/6 {.smaller}
+3. **Theory** 
+- Derive testable *hypotheses* (more on this later)
+- Ensure they are clear, falsifiable, and specific
+  
+- Things to avoid: 
+  - listing theories without integrating them into a coherent argument
+  - making overly broad claims without a clear mechanism
+  - failing to connect the theory to empriical testing in later sections
+  
+## Structure 4/6 {.smaller}
+4. **Data & Methods**
+- Explains *how* you test your hypotheses
+- Data source, time frame & scope
+  
+- What is your *DV*? 
+- What is/are your main independent variable/s of interest? 
+- operationalization: how are key concepts measured? (how do you measure "populism", "vote for far-right parties", "economic performance")
+  - missing data & limitations (if applicable)
+  
+## Structure 4/6
+4. **Data & Methods**
+  - What statistical method or model are you using? 
+  - Why this model? 
+
+## Structure 5/6 {.smaller}
+5. **Results**
+- Presents the key findings of your analysis
+- Clearly shows and states whether the hypotheses are supported or not
+- Focuses on description and interpretation of your findings
+
+- Summarize your findings
+- Show the evidence (regression tables, coef plots, predicted probs)
+- Remember: your paper is telling a story, this is where you need to drive home your story
+
+## Structure 5/6
+5. **Results**
+- You can use numbers but explain what your findings mean in substantive terms
+- Keep tables and figures readable, highlight results rather than overwhelming the readers
+
+
+- Robustness checks:
+  - Show that the results are robust: multicollinearity? omitted variables? heteroskedasticity? 
+  - robustness checks show that your results hold even when we are stricter with our models
+  
+
+## Structure 6/6
+6. **Conclusion/Discussion**
+- Restate your research question and argument
+- Summarize your findings
+- What are shortcomings/limitations? Be honest, as this is normal and you can never do everything
+- What is the contribution?
+- What could future research do? 
+
+
+## Structure 7/6
+7. **Appendix**
+- Descriptive statistics
+- Your robustness checks, the tables, and any additional information should go here
+
+
+
+## Finding a question? {.smaller}
+- Read, read, read
+  - identify key journals and publications in your area of interest
+  - talk to professors
+
+- Pay attention to the gaps, unresolved debates, or contradictions in the literature
+- Check the "Future Research" sections -- often, authors highlight open questions
+- 4 strategies: find a puzzle, challenge assumptions, replicate with a twist, combine insights
+- Dont't be vagues
+  - for quant: is your RQ operationalizable?
+  
+## Operationalize {.smaller}
+- Find data: [PolData](https://github.com/erikgahner/PolData), a dataset with political datasets
+- Formulate the right hypothesis
+- Here are some bad examples: 
+  - Democracy affects economic growth.
+  - Democracy is the best form of government.
+  - Authoritarian regimes restrict political freedoms.
+  - Democratic institutions, economic policies, and social movements together determine policy stability
+  - Countries with higher levels of democracy have lower corruption, stronger economic growth, and greater social trust.
+  
+## Operationalize
+- Is your DV actually measuring what you want? 
+- Is your IV actually measuring what you want? 
+- What other variables matter for explaining the variance of your DV? 
+
+## How to write? {.smaller}
+- Writing is subjective and personal
+- I write up detailed structures of my literature review & theory, that's what I struggle most with
+- Other parts are more like check-lists
+
+- What editor to use? Word, LaTeX, RSTudio/Quarto?
+
+
+## How to present findings?
+- Visualizations always help! 
+- Some people don't even include their regression tables in their papers
+- Visualize your data, be generous to the reader
+- Coefficient plots or predicted probabilities tell a better story than complex regression tables
+
+## Reproducibility matters
+- The perfect code is easily understood by now-you, later-you, and ideally by others as well
+- Good code always reproduces the same results all the time
+- But also the way you detail your data handling, methodological decisions in your paper matters
+  - try reproducing a paper only based on the information the authors have given
+  - my guess: 85% would not be reproducible
+  
+## For this final paper 1/2
+- Write about something you find interesting (read!)
+- No expectations of perfect literature review or groundbreaking argument
+- We want to know whether you can write up a paper
+- But most importantly we care about whether and how you can apply the methods covered in this class
+- Each paragraph introduces one idea, each paragraph's first sentence should be a summary of that idea
+
+## For this final paper 1/2 {.smaller}
+- What interests you?
+- Do you like quantitative methods?
+- How ambitious do you want to be? --> papers that originated in this class have been published, see for example my colleague [Charlotte Boucher](https://www.sciencedirect.com/science/article/pii/S0261379423001361)
+  - much worse papers have been written here: my personal one for example
+- Don't overcomplicate your life
+- Lastly a quote from Jan's reply to an email I sent him 4 years ago: "If you fail to support your hypothesis, then you are a normal scientist. For the sake of this paper, you explain it, and that’s it."
+
+
+## References
+::: {#refs}
+:::
+
+
