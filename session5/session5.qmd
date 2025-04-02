@@ -13,11 +13,7 @@ format:
     theme: default
 ---
 
-```{=html}
-<style>body {text-align: right}</style>
-```
-
-```{r, include=FALSE}
+```{r}
 library(tidyverse)
 ```
 
@@ -43,8 +39,6 @@ However, this also makes the interpretation of these models a bit intricate and 
 But enough small talk, let's first do some data wrangling which you all probably dread at this point...
 
 ## Data Management for Multinomial Regression
-
-As I have said, we will work on voting choice in four different countries. I selected Denmark and Germany. Germany I have chosen because I was working on this model a couple of months ago and Denmark is for fun.
 
 The data which we will use for this session is the 9th round of the ESS published in 2018. The goal of this session is to understand predictors that tell us more about why people vote for Populist Radical-Right Parties, henceforth called *PRRP* (Mudde 2007). For this I have two main hypotheses in mind, as well as some predictors which I know are important based on the literature. Finally we also need some control variables which we need to control for in almost any regression analysis using survey data.
 
@@ -83,19 +77,23 @@ Again, every transformation and mutation of variables which you see below is don
 You have seen a similar chunk of code in the last script. See how, once you have a code that works for one dataset, you can use it again?
 
 ```{r}
-# cleaning the dependent variables all over the dataframe
+library(dplyr)
+
 ess_clean <- ess |>
-    mutate(across(where(is.numeric), ~case_when(
-           . %in% c(66, 77, 88, 99, 7777, 8888, 9999) ~ NA_integer_,
-           TRUE ~ .)),
-      prtvtdfr = replace(prtvtdfr, prtvtdfr %in% c(1, 2, 10, 12:99), NA),
-           prtvede1 = replace(prtvede1, !prtvede1 %in% c(1:6), NA),
-           prtvtddk = replace(prtvtddk, !prtvtddk %in% c(1:10), NA),
-           prtvtdpl = replace(prtvtdpl, !prtvtdpl %in% c(1:8), NA),
-           # get rid of unwanted values indicating no response etc
-           blgetmg = replace(blgetmg, !blgetmg %in% c(1:2), NA),
-           # gender recoded to 1 = 0, 2 = 1 (my personal preference)
-           gndr = recode(gndr, `1` = 0, `2` = 1))
+  mutate(across(
+    where(is.numeric) & !starts_with("yrbrn"),  # Exclude 'age' while keeping numeric columns
+    ~ case_when(
+      . %in% c(66, 77, 88, 99, 7777, 8888, 9999) ~ NA_integer_,
+      TRUE ~ .
+    )
+  ),
+  prtvtdfr = replace(prtvtdfr, prtvtdfr %in% c(1, 2, 10, 12:99), NA),
+  prtvede1 = replace(prtvede1, !prtvede1 %in% c(1:6), NA),
+  prtvtddk = replace(prtvtddk, !prtvtddk %in% c(1:10), NA),
+  prtvtdpl = replace(prtvtdpl, !prtvtdpl %in% c(1:8), NA),
+  blgetmg = replace(blgetmg, !blgetmg %in% c(1:2), NA),
+  gndr = recode(gndr, `1` = 0, `2` = 1))
+
 ```
 
 In fact, you could already build the model now and start the multinomial regression. However, I add an additional data management step by placing the numeric values of the election variable in a new variable called `vote_de`, where I convert the numeric values to character values and at the same time give them the names of the parties. This will automatically transform NAs in all the rows in which the country is not that in which the person has voted.
@@ -157,86 +155,87 @@ model_dk <- multinom(vote_dk ~ imueclt  + stflife + trstplt + blgetmg + gndr +
 
 ### Re-leveling your DV
 
-In my case, the German PRRP is called *Alternative für Deutschland* meaning it starts with an "A". R tends to take the alphabetical order as a criterion for the baseline meaning that the baseline for your multinomial model is chosen based on the party which comes first in alphabetical order. Depending on what you want to show, you might want to change the baseline which we can do with the `relevel()` function. Let's say we are not interested in vote choice regarding the PRRP but conservative parties and thus want to put the German Christian conservative party, the CDU/CSU, as a baseline. Here is how we could do this in R:
+In my case, the German PRRP is called *Alternative für Deutschland* meaning it starts with an "A". R tends to take the alphabetical order as a criterion for the baseline meaning that the baseline for your multinomial model is chosen based on the party which comes first in alphabetical order. Depending on what you want to show, you might want to change the baseline which we can do with the `fct_relevel()` function. Let's say we are not interested in vote choice regarding the PRRP but conservative parties and thus want to put the German Christian conservative party, the CDU/CSU, as a baseline. Here is how we could do this in R:
 
 ```{r}
 # don't run this code chunk
 #| eval: false
 # you need to specify your DV as a factor for this; further, the ref must 
 # contain the exact character label of the party
-ess_clean$vote_de <- relevel(as.factor(ess_clean$vote_de), ref = "CDU/CSU")
+
+ess_clean$vote_de |> levels()
+
+ess_clean <- ess_clean |> 
+  mutate(vote_de = fct_relevel(as.factor(vote_de), "CDU/CSU"))
+
+ess_clean$vote_de |> levels()
+
 ```
 
 ## Interpreting a Multinomial Model
 
-You already know that I like the `stargazer` package for displaying a regression table. This time I paid attention to what level of statistical significance leads to a star (\*). I changed it so that, like in the `summary()` function, p-values below 0.05 will be used as the minimum level of statistical significance instead of 0.1. `dep.var.caption =` allows be to specify a caption for our DV and we can use our own labels for the IVs instead of the variables' names by using the `covariate.labels =` argument.
-
-I have specified in the first chunk of code which arguments concern the generated output in LaTeX. I still recommend you start learning how to write papers in LaTeX. This is just to say that some arguments are not useful at all when `type = "text`. But LaTeX generates more beautiful tables ;)
+You already know the `stargazer` package for displaying a regression table. This time we will use another package called `modelsummary` which is developed by [Vincent Arel-Bundock](https://arelbundock.com/) who also develops the `marginaleffects` package that we will see later on. The documentation on the package can be found [here](https://modelsummary.com/articles/modelsummary.html). You might wonder why I am showing you this package as you already know `stargazer`. Modelsummary is much more flexible and compatible with many more model classes than stargazer, which is why I mostly use modelsummary at this point.
 
 ```{r}
-#| output: asis
 #| fig-align: center
 
-# specifying the object in which the model is stored
-stargazer::stargazer(
+
+modelsummary::modelsummary(
   model_de,
-  # adding a title to the table
+  stars = TRUE,
+  # gof_omit = c("AIC|BIC|RMSE"),
+  stars_method = "simple",
+  coef_map = c(
+    "imueclt" = "Positivity Immigration",
+    "stflife" = "Satisfaction w/ Life",
+    "trstplt" = "Trust in Politicians",
+    "blgetmg" = "Ethnic Minority",
+    "gndr" = "Gender",
+    "yrbrn" = "Age",
+    "eduyrs" = "Education",
+    "hinctnta" = "Income"
+  ),
   title = "Multinomial Regression Results Germany",
-  # change this to the desired output format; either
-  # LaTeX, html, or text (depending on your document)
-  # editor
-  type = "html",
-  # some LaTeX information
-  float = TRUE,
-  # font size of the LaTeX table
-  font.size = "small",
-  # column width in final LaTeX table
-  column.sep.width = "-10pt",
-  # specifying the p-values which lead to stars in our
-  # table
-  star.cutoffs = c(.05, .01, .001),
-  # caption for the DV
-  dep.var.caption = c("Vote Choice"),
-  # labels for our IVs; must be in the same order as our
-  # IVs in the initial model
-  covariate.labels = c(
-    "Positivity Immigration",
-    "Satisfaction w/ Life",
-    "Trust in Politicians",
-    "Ethnic Minority",
-    "Gender",
-    "Age",
-    "Education",
-    "Income"
+  notes = "Vote Choice is the dependent variable.",
+  output = "html",
+  shape = model + term ~ response,
+  gof_map = tibble::tribble(
+    ~raw, ~clean, ~fmt,
+    "AIC", "Akaike Inf. Crit.", 2,
+    "BIC", "Bayesian Inf. Crit.", 2,
+    "logLik", "Log-Likelihood", 2,
+    "deviance", "Deviance", 2
   )
 )
+
+modelsummary::get_gof(model_de)
+
 ```
 
 ```{r}
+#| eval: false
 #| output: asis
 #| fig-align: center
 
-# the annotations of the above model would be the same for this model
-stargazer::stargazer(
+
+modelsummary::modelsummary(
   model_dk,
-  title = "Multinomial Regression Results Denmark",
-  type = "html",
-  float = TRUE,
-  font.size = "tiny",
-  star.cutoffs = c(.05, .01, .001),
-  dep.var.labels = c("Germany"),
-  dep.var.caption = c("Vote Choice"),
-  covariate.labels = c(
-    "Positivity Immigration",
-    "Satisfaction w/ Life",
-    "Trust in Politicians",
-    "Ethnic Minority",
-    "Gender",
-    "Age",
-    "Education",
-    "Income"
-  )
+  stars = TRUE,
+  stars_method = "simple",
+  coef_map = c(
+    "imueclt" = "Positivity Immigration",
+    "stflife" = "Satisfaction w/ Life",
+    "trstplt" = "Trust in Politicians",
+    "blgetmg" = "Ethnic Minority",
+    "gndr" = "Gender",
+    "yrbrn" = "Age",
+    "eduyrs" = "Education",
+    "hinctnta" = "Income"
+  ),
+  shape = model + term ~ response
 )
+
+modelsummary::get_gof(model_dk)
 
 ```
 
@@ -269,6 +268,8 @@ You could obviously exponentiate the values that we have here in order to get th
 ## Predicted Probabilities
 
 You all hopefully still remember the idea of *predicted probabilities* which we have already seen last time for a simply logistic regression. You hold all but one predictor variables (IVs) constant at their mean or another logical value. The one predictor which you do not hold constant you let alternate/vary to estimate the predicted probabilities of this specific variable of interest and the different values it can take on (on your dependent variable). The predicted probabilities can be tricky to code manually and we are not going to do this again but we will use a package that can do this for us.
+
+The text below is the outdated version of how I calculate predicted probabilities for multinomial models. I still leave it in here because it is still working but I recommend working with the `marginaleffects`.
 
 The package is called `MNLpred` and allows us to specify the variable of interest. This packages makes draws from our posterior distribution (hello Bayesian statistics) and simulates our coefficients n-times (we tell it how many times to run the simulation) and then takes the mean value of all of our simulations. \footnote{Since R will simulate many many things at the same time, your knit might take more time than usually. This is perfectly normal.} This way, we end up more or less with the same predicted probabilities that we have seen last week. These are much more easily interpreted than relative risk ratios (the odds-ratios of multinomial regressions) and can be plotted.
 
@@ -341,7 +342,7 @@ ggplot(data = pred2$plotdata, aes(
 
 Here we can see very well by how many percent the likelihood increases or decreases for each party given that our independent variable, our predictor, of trust in politicians increases (increasing values mean more trust in politicians).
 
-We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: \href{https://g.co/kgs/6MxyCy}{https://g.co/kgs/6MxyCy} (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected.
+We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected.
 
 ```{r}
 ggplot(data = pred2$plotdata, aes(
@@ -424,6 +425,77 @@ ggplot(data = pred1$plotdata, aes(
   xlab("Positivity towards Immigration")
 ```
 
+
+## `marginaleffects`
+
+```{r}
+library(marginaleffects)
+
+multinom_pred_de <- plot_predictions(
+  model_de,
+  type = "probs",
+  condition = "trstplt",
+  draw = FALSE) |> 
+  as_tibble()
+
+multinom_pred_de
+
+```
+
+```{r}
+multinom_pred_de |>
+  ggplot(aes(trstplt, estimate, group = group, color = group)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  facet_wrap(~group) +
+  scale_color_manual(
+    values = c(
+      "#03c2fc",  # AFD
+      "#000000",  # CDU
+      "#f26dd5",  # DIE LINKE
+      "#FFFF00",  # FDP
+      "#00e81b",  # GRUENE
+      "#fa0000"   # SPD
+    )
+  ) +
+  theme_light()
+```
+
+
+```{r}
+multinom_pred_de_gender <- plot_predictions(
+  model_de,
+  type = "probs",
+  condition = "gndr",
+  draw = FALSE) |> 
+  as_tibble()
+
+multinom_pred_de_gender |> 
+  ggplot(aes(gndr, estimate, group = group, color = group)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  facet_wrap(~group) +
+  scale_color_manual(
+    values = c(
+      "#03c2fc",  # AFD
+      "#000000",  # CDU
+      "#f26dd5",  # DIE LINKE
+      "#FFFF00",  # FDP
+      "#00e81b",  # GRUENE
+      "#fa0000"   # SPD
+    )
+  ) +
+  labs(
+    x = "",
+    y = "Predicted Probabilities by Gender",
+    color = ""
+  ) +
+  theme(
+    legend.position = "none"
+  ) +
+  theme_light()
+```
+
+
 ## Diagnostics of Multinomial Models
 
 I have talked about diagnostics of models before. This will be the first time that we really touch upon that in models that are not linear like OLS. Usually this is a step which you should take between the building and the final interpretation of your model.
@@ -439,6 +511,7 @@ This is how you do this in R:
 library(pscl)
 pR2(model_de)
 ```
+
 
 ### Hetereoskedasticity and Multicollinearity
 
@@ -485,79 +558,6 @@ What is a better AIC? The **lower** AIC indicates that the model fits our data b
 
 ### BIC (Bayesian Information Criterion)
 
-Bayesian Statistics [^session3-1] are super fascinating and I will include them wherever I can. Luckily, the BIC is very common and is to the AIC what the adjusted $R^2$ is to the $R^2$. This means that it is a "stricter" measure of goodness of fit than the AIC. It is quite similar to the AIC but differs in that it penalizes you for adding "less useful" variables to your model (potentially *overfitting* or overcomplexifing your model). Thus, similarly to the AIC, we should also favor the **lower** BIC!
+Bayesian Statistics [^session5-1] are super fascinating and I will include them wherever I can. Luckily, the BIC is very common and is to the AIC what the adjusted $R^2$ is to the $R^2$. This means that it is a "stricter" measure of goodness of fit than the AIC. It is quite similar to the AIC but differs in that it penalizes you for adding "less useful" variables to your model (potentially *overfitting* or overcomplexifing your model). Thus, similarly to the AIC, we should also favor the **lower** BIC!
 
-[^session3-1]: The second school of doing statistics. What we are doing is called *frequentist* statistics. Bayesian statistics are a bit more complicated and require a different way of thinking about statistics but they are the more intuitive way of conducting statistics (without p-values but with something you could call *certainty*). They are also more computationally expensive and thus, have only gained traction over the recent decades. They are gaining more and more popularity. If you are interested in learning more about them, I recommend the book by Richard McElreath (2016) [*Statistical Rethinking: A Bayesian Course with Examples in R and Stan*](https://github.com/rmcelreath/stat_rethinking_2024). He also has lectures on YouTube that follow the book. Definitely worth a try!
-
-## APIs and Fun Data Visualization (OPTIONAL!)
-
-In this session's optional section, I will introduce you to the logic of APIs and how to use them in R. Further, we will use data from Spotify (which we will collect through their API) to make fun data visualizations!
-
-### What is an API?
-
-API stands for *Application Programming Interface*. It is a way for two applications to communicate with each other. This is a very technical way of saying that an API allows us to carefully and *gently* collect data from a server, a website or a database. APIs are a very common way of collecting data from websites. Most websites use internal APIs to communicate with their own databases [^session3-2], whereas some websites also offer public APIs which allow you to collect data from their website.
-
-[^session3-2]: This is a fun exercise for webscraping and you can imitate the websites' calls to their server API to collect data but more on that at a later point.
-
-Think about APIs like this: You go to a restaurant and you want to eat. You could be very rude, ignore every other customer, ignore every social norm you have ever learned and go to the kitchen to tell the chef what you want. Now, if only one person did this, nothing would happen (even if I were surprised if the chef would take your order). But if now every customer did this, started yelling their order at the chef, he would probably just stop working and throw in the towel, or worse, throw you out of the restaurant. To avoid that, there are waiters and waitresses that usually come to your table, take your order, deliver that to the kitchen and once your dish is ready, you will get it to your table. Transposing this onto APIs, the waiter/waitress is our API. They make sure that we can communicate with the kitchen (the database) without disrupting the work of the chef (the server).
-
-Usually APIs are win-win situations for us and for them. They can control how much data we collect from them, they can dictate the rules and have traces of what we were doing when and where. And we can collect data without disrupting their work. However, sometimes APIs are not public and we need to find other ways to collect data from websites. This is called *webscraping* and is a bit more complicated and in the appendix.
-
-Some APIs are more useful than others. The [New York Times' one](https://developer.nytimes.com/) is unfortunately quite useless. Spotify's API is more fun, as we will see in a bit. Twitter used to have one of the best developer's accesses to their data through a wonderful API until he-who-must-not-be-named destroyed the platform. But also government websites have APIs which make it a bit more regulated to access their data.
-
-### Spotify API
-
-For the sake of the example, we will use the Spotify API to communicate with the Spotify servers and ask them for data. You usually have to sign up for an API on the respective website. If you want to reproduce my code, you will have to sign up for a Spotify API [here](https://developer.spotify.com/dashboard/login). Once you have signed up, you will be able to create a new app. This will give you a client ID and a client secret. These are your credentials to access the API. You will need them to access the API.
-
-```{r}
-#| messages: false
-
-needs('spotifyr',
-      'tidyverse',
-      'plotly',
-      'ggimage',
-      'httpuv',
-      'httr', 
-      'usethis')
-```
-
-### System Enivronments and API keys
-
-We will get a bit more technical and speak about good practices in R for a second. When you apply to an API or sign up for an access, you will usually get a sort of key, clientID or something to authenticate yourself whenever you make requests to the API. This way, they know that it is you who is making requests and that you are validated by them. This information is **sensitive**! You do not share it with anyone, and you never show this to anyone. This is why you need to store it somewhere safe. One of the options we have in R is to save them in our system environment. It is a file in which we can store these things. Honestly, the keys to APIs are really long and complicated and you do not want to type them in every time you want to use them. So, we will store them in our system environment. This is a bit more complicated than just typing them in, but it is a good practice. It is also not the safest way to do it but for simplicity's sake we will do it like this for now.
-
-::: callout-note
-If you want to follow my code and run it on your end, you will have to first sign up to the Spotify developer's portal, generate the key and clientID and come back to my script then.
-:::
-
-This line of code opens up a file called `.Renviron` in which we can store our keys. If you have never done this before, it will open up a new file. If you have done this before, it will open up the file in which you probably already have things stored.
-
-```{r}
-#| eval: false
-usethis::edit_r_environ()
-```
-
-Once you have opened the file, you can add the following lines to it. You will have to replace the `XXXX` with your own keys. Once you have done that, save the file **and restart R**! This is necessary for the changes to take effect.
-
-```{r}
-#| eval: false
-SPOTIFY_CLIENT_ID = "XXXX"
-SPOTIFY_CLIENT_SECRET = "XXXX"
-# this has to be the same localhost as in indicated in the spotify developer portal
-SPOTIFY_REDIRECT_URI = "http://localhost:1410/"
-```
-
-Now that we have added the sensitive information to our R Environment, it will remain there until we decide to delete it. If we need to load it now, we can run these lines of code:
-
-```{r}
-client_id <- Sys.getenv("SPOTIFY_CLIENT_ID")
-client_secret <- Sys.getenv("SPOTIFY_CLIENT_SECRET")
-redirect_uri <- Sys.getenv("SPOTIFY_REDIRECT_URI")
-```
-
-
-
-
-
-```{=html}
-<style>body {text-align: justify}</style>
-```
+[^session5-1]: The second school of doing statistics. What we are doing is called *frequentist* statistics. Bayesian statistics are a bit more complicated and require a different way of thinking about statistics but they are the more intuitive way of conducting statistics (without p-values but with something you could call *certainty*). They are also more computationally expensive and thus, have only gained traction over the recent decades. They are gaining more and more popularity. If you are interested in learning more about them, I recommend the book by Richard McElreath (2016) [*Statistical Rethinking: A Bayesian Course with Examples in R and Stan*](https://github.com/rmcelreath/stat_rethinking_2024). He also has lectures on YouTube that follow the book. Definitely worth a try!
