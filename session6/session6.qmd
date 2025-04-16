@@ -1,28 +1,20 @@
 # Time Series
 
-```{=html}
-<style>body {text-align: justify}</style>
-```
-
 ## Introduction
 
 This week's R session will introduce you to the logic of time series cross section in RStudio. Be aware that just because it sounds very impressive does not mean that we need to be in awe. It is rather straight forward and once you can wrap your head around it, you will see that -- as always -- the actual coding part is not that complicated (except but... we still have to manage our data).
 
 This week's session will also introduce you to a dataset which you have not seen: the *Comparative Manifesto Project* (CMP) or also referred to as [*Manifesto Research on Political Representation*](https://manifesto-project.wzb.eu/%7D%7Bhttps://manifesto-project.wzb.eu/). If you are only interested in party positions based on their manifestos, and thus only in intervals of 4-5 years, it is a great source for everything that has to do with party positions and political competition over time, within party families or within several countries -- or everything all at once.
 
-The idea of the CMP is that individual human-coders split the party manifestos for each party at each election into quasi-sentences and attribute it to a certain topic. The topics are predefined and go back to the saliency theory of @budge_explaining_1983. In their pre-definition, they are also attributed to either left-wing politics or right-wing politics. The idea of the saliency theory is that parties will only emphasize those issues which are favorable to them. Therefore, we can place parties in a (one- or twodimensional) space. Examining these estimates of party positions over time can give us insights on party competition.
+The idea of the CMP is that individual human-coders split the party manifestos for each party at each election into quasi-sentences and attribute it to a certain topic. The topics are predefined and go back to the saliency theory of @budge_explaining_1983. In their pre-definition, they are also attributed to either left-wing politics or right-wing politics. The idea of the saliency theory is that parties will only emphasize those issues which are favorable to them. Therefore, we can place parties in a (one- or two-dimensional) space. Examining these estimates of party positions over time can give us insights on party competition.
 
-I could spend hours talking about how to model party competition. But according to Jan, I spend way too much of my time thinking about models and operationalizations,[^session6-1] which is why I will not bother you with my thoughts on the CMP and its advantages or inconveniences. Let me say this at least: the CMP is a powerful and widely used database; it relies, however, on very very strong assumptions, which can be problematic (imho). If you are interested in party competition and party positions, feel free to contact me or come see me after class. Also, here are some references, which you might want to consult to check out scientific publications using the CMP or articles evaluating the validity of the CMP's measures; for different uses of the CMP: @green_owning_2008 or @adams_policy_2009; for critical evaluations of the CMP: @dinas_measuring_2010, @gemenis_what_2013, @ruedin_estimating_2019.
-
-[^session6-1]: He is absolutely right in reminding me to work on my theory :(
-
-I would also like to emphasize that this week's code is inspired by a publication by @abou-chadi_niche_2016-1. I have not had the time to come up with a witty coding idea myself and the paper by Abou-Chadi came with a replication dataset. The TSCS model with which we are going to play around with does not follow the exact same method but is loosely based on his paper and generates somewhat close results. The purpose of this script is to expose you to the logic of ARIMA models, TSCS, especially to fixed and random effects models.
+I could spend hours talking about how to model party competition. But according to Jan, I spend way too much of my time thinking about models and operationalizations, which is why I will not bother you with my thoughts on the CMP and its advantages or inconveniences. Let me say this at least: the CMP is a powerful and widely used database; it relies, however, on very very strong assumptions, which can be problematic. If you are interested in party competition and party positions, feel free to contact me or come see me after class. Also, here are some references, which you might want to consult to check out scientific publications using the CMP or articles evaluating the validity of the CMP's measures; for different uses of the CMP: @green_owning_2008 or @adams_policy_2009; for critical evaluations of the CMP: @dinas_measuring_2010, @gemenis_what_2013, @ruedin_estimating_2019.
 
 \par
 
 ### Some Thoughts on Time Series in general...
 
-Now, you might be wondering if you are ever going to use these seemingly incomprehensible formulas, equations and terms like Error Correction Model, lagged dependent variable or structural equation approach. The boring answer is that this is up to you. It was up to me too at one point. Remember that I took this class too, had my mind made up about a multinomal model I wanted to do and was pretty sure that I would never dig deeper into time series. Little did I know that your research interests sometimes force you to learn methods you thought you would never need. This happened to me a couple months later, when at the beginning of my third semester I wanted to work on parties and the evolution of party positions *in response* to other party's shifts. Jan suggested that I would have to look at time series at some point. I did and I have come to hate and to like them. I did not say love them, I like them. They are still quite awful in terms of math and push me to the boundaries of what I can grasp...
+Now, you might be wondering if you are ever going to use these seemingly incomprehensible formulas, equations and terms like Error Correction Model, lagged dependent variable or structural equation approach. The boring answer is that this is up to you. It was up to me too at one point. Remember that I took this class too, had my mind made up about a multinomal model I wanted to do and was pretty sure that I would never dig deeper into time series. Little did I know that your research interests sometimes force you to learn methods you thought you would never need. This happened to me a couple months later, when at the beginning of my third semester I wanted to work on parties and the evolution of party positions *in response* to other party's shifts. Jan suggested that I would have to look at time series at some point. I did and I have come to hate and to like them. 
 
 \par
 
@@ -32,15 +24,14 @@ Time series are one of the best statistical methods to understand social and man
 
 ### ... and more specifically on Time Series in R
 
-This is now the 5th session and you might still believe me that R can be fun, and that it can be easy in some cases. The logic and math behind time series analysis can be tricky, I am aware of that. But you will see that many things are taken care of by packages like the `plm` or `tseries` packages for panel data analysis (Whatever that is for now...) or general time series analyses. Some things we still need to do ourselves, especially the specification of our ARIMA models which you have seen in Jan's class. I will try to further give you some help on that as well as some other tricks!
+This is now the 6th session and you might still believe me that R can be fun, and that it can be easy in some cases. The logic and math behind time series analysis can be tricky, I am aware of that. But you will see that many things are taken care of by packages like the `plm`, `fixest`, or `tseries` packages for panel data analysis (Whatever that is for now...) or general time series analyses. Some things we still need to do ourselves, especially the specification of our ARIMA models which you have seen in Jan's class. I will try to further give you some help on that as well as some other tricks!
 
 \par
 
 ## What is Time Series Cross Section (TSCS)?
 
-I suppose you have seen this with Jan, so I am only going to briefly recapitulate the idea of TSCS. Generally speaking, we have two things going on with which we can have a lot of data fun. First, we have observations for more than one unit (e.g., countries, parties) and for more than one point in time. If you wish to work with TSCS models, you first need to find a dataset that has enough observations *over time* and *in more than one unit*. As a rough guesstimation, I would say 20 observations at least as the bare minimum, ideally many more. Unfortunately, this is where data availability can be an issue [^session6-2] In the next paragraphs, I will try to show you what we need to understand to conduct TSCS analyses in R. For all the tricky math stuff, please refer to Jan's lecture which gives a much better and thorough overview on everything that is going on underneath the hood of TSCS and its assumptions. If you have any questions on this, he is the better reference than me but I can try my best in answering your questions.
+I suppose you have seen this with Jan, so I am only going to briefly recapitulate the idea of TSCS. Generally speaking, we have two things going on with which we can have a lot of data fun. First, we have observations for more than one unit (e.g., countries, parties) and for more than one point in time. If you wish to work with TSCS models, you first need to find a dataset that has enough observations *over time* and *in more than one unit*. As a rough guesstimation, I would say 20 observations at least as the bare minimum, ideally many more. Unfortunately, this is where data availability can be an issue. In the next paragraphs, I will try to show you what we need to understand to conduct TSCS analyses in R. For all the tricky math stuff, please refer to Jan's lecture which gives a much better and thorough overview on everything that is going on underneath the hood of TSCS and its assumptions. If you have any questions on this, he is the better reference than me but I can try my best in answering your questions.
 
-[^session6-2]: Until we see many more ways to get to data in the next session, when we speak about quantitative text analysis.
 
 \par
 
@@ -132,14 +123,13 @@ ggplot(cmp, aes(x = year, y = rile, color = party)) +
     "#f26dd5",
     "#fa2024"
   )) +
-  # without this line, the lables of the x-axis would overlap
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
   labs(
     title = "Left-Right Position of German Parties",
     x = "Year",
     y = "Left-Right Position"
-  )
-
+  ) +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 ```
 
 This gives us the smoothed means for every party over the span of 1949 until 2021. We should start with a \textit{univariate series}. This means that we will look at the evolution of one series over time; in our case, this specifically means that we will look at the evolution of the left-right position of \textit{one party} over time. Let's start with the Christian-Democrats, the CDU, and the Social-Democrats, the SPD. I will quickly create an object, only containing values of the CDU and another one for only the SPD.
@@ -154,7 +144,7 @@ spd <- cmp |>
   filter(party == "SPD")
 ```
 
-We are, however, not interested in the mean position over time but the inidividual values over time. The first thing you should always do, when working with time series data, is to plot your variable of interest. It's like looking at a data set when you first import it. Sometimes you can already detect things like seasonality that we will test for either way:
+We are, however, not interested in the mean position over time but the individual values over time. The first thing you should always do, when working with time series data, is to plot your variable of interest. It's like looking at a data set when you first import it. Sometimes you can already detect things like seasonality that we will test for either way:
 
 ```{r}
 cdu |>
@@ -166,7 +156,9 @@ cdu |>
   labs(title = "RILE CDU/CSU over time",
        x = "Year",
        y = "Right to Left") +
-  theme_minimal()
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+
 ```
 
 # Specifying the Spectre -- ARIMA
@@ -223,11 +215,11 @@ Does that sound really abstract? It is. Maybe let's look at the way how we const
 
 ### Data of @abou-chadi_niche_2016-1
 
-Here, I first import the data set which came in the paper. I downloaded it from the \href{https://dataverse.harvard.edu/}{Harvard Dataverse} which is the most comprehensive platform for datasets and reproduction data and code. If you are ever unsure of where to look for data, this is where I would start! I will speak about it again in session 6, I believe.
+Here, I first import the data set which came in the paper. I downloaded it from the \href{https://dataverse.harvard.edu/}{Harvard Dataverse} which is the most comprehensive platform for datasets and reproduction data and code. If you are ever unsure of where to look for data, this is where I would start!
 
 \par
 
-I have done the job of selecting the variables as well. You can see that I also create a lagged variable in the last line of code. This will create a variable with the exact same values as `cultposition` but always one election behind. The value of `cultposition` at $t-1$ will be now at $t$ in the newly created lagged variable. I am afraid that this is not clear so I will try to reframe it less technically: A lagged variable is a variable that takes on the value of a previous time period for a given variable. In our case, `cultposition` measures the position of a party at a specific election. So, if you want to create a lagged variable of `cultposition`, you would take the value of `cultposition` for the previous election and assign it to the current election.
+I have done the job of selecting the variables as well. You can see that I also create a lagged variable in the last line of code. This will create a variable with the exact same values as `cultposition` but always one election behind. The value of `cultposition` at $t-1$ will be now at $t$ in the newly created lagged variable. I am afraid that this is not clear so I will try to reframe it less technically: A lagged variable is a variable that takes on the value of a previous time period for a given variable. In our case, `cultposition` measures the position of a party at a specific election. So, if you want to create a lagged variable of `cultposition`, you would take the value of `cultposition` for the previous election and assign it to the current election. When creating the lag of something in R, make sure to force R to take the `lag()` function from the `dplyr` package. Otherwise, it will take the one from the `stats` package which is not what we want. As these two packages are conflicting, i.e. the use the same worded function for two different things, you want to make sure that it is the right function.
 
 For example, let's say we have the following data for `cultposition` in three different elections:
 
@@ -264,7 +256,7 @@ tac <- haven::read_dta("data/cmp_abouchadi.dta") |>
   mutate(lag_cultposition = dplyr::lag(cultposition))
 ```
 
-### Fixed Effects
+### Time Series using `plm`
 
 We must first load the `plm` model into our session. Everything else is, to be honest, relatively straight forward. We specify a model with the `plm()` function of said package and follow the same logic as for a simple `lm()` model. Two things you must take care of though: first specifying the unit and the time variables, as well as second whether it should be a random or fixed effects model. The unit and time variable are specified in the `index = c("unit", "time")` argument, whereas the `model = ...` argument declares the kind of model we will use. `model = "within"` creates a fixed effects model, whereas `model = "random"` will result in a random effect model (duh...).
 
@@ -281,7 +273,9 @@ fixed_effects <-
 summary(fixed_effects)
 ```
 
-### Random Effects
+
+
+Now let's compare this to random effects: 
 
 ```{r}
 random_effects <-
@@ -332,6 +326,44 @@ phtest(fixed_effects, random_effects)
 The results show us that the p-value \< 0.05. That means that we should opt for a fixed effects model. If p \> 0.05, we should specify a random effects model. I promised not to go too deep into the math behind all this and Jan does discuss it in his lecture. But this test also relies on quite some strong assumptions...
 
 I encourage you to dig deeper into time series. They can truly be fun but they do necessitate some math and can cause headaches... I will see you in two weeks for some TaDa fun!
+
+
+## Time Series with `fixest`
+
+The differences between the `fixest` and the `plm` package are not that big. The `fixest` package is a bit more flexible and I believe for handling clustered standard errors it is a bit more straightforward. In some cases, this is what you need.
+
+
+
+```{r}
+library(fixest)
+
+fixed_effects_fixest <-
+  feols(
+    cultposition ~ lag_cultposition + sumright + limmig +
+      govparty + pervote | partyname,
+    data = tac
+  )
+```
+
+```{r}
+modelsummary::modelsummary(
+  fixed_effects_fixest, 
+  stars = TRUE,
+  coef_map = c(
+    "lag_cultposition" = "Lag of cultural Position",
+    "sumright" = "Radical Right Support at t-1",
+    "limmig" = "Log of Immigration",
+    "govparty" = "Government Participation",
+    "pervote" = "Party Size"
+  )
+  
+)
+```
+
+
+
+# Hierarchical Models
+This comes a bit awkwardly at the end of this script but unfortunately there is not more time to discuss hierarchical/multi-level models. Take this as a script and a small introduction to hierarchical models. I will not go into too much detail on the math behind it but I will try to give you a good overview of what it is and how to use it in R.
 
 Below I simulate data to demonstrate how to fit a hierarchical model using the `lme4` package in R. In this example, we have data on individual income, region wealth index, and voting behavior across 10 regions. The hypothesis is that individual income positively influences voting behavior. This is simulated data and a hypothesis that probably would not hold up in a real research setting. However, it serves as a good example to demonstrate how to fit a hierarchical model.
 
