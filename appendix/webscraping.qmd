@@ -58,7 +58,7 @@ Let's look at the [CEE's website](https://www.sciencespo.fr/centre-etudes-europe
 ### The different html elements
 A node, in web development, refers to any single point in the document tree. This tree represents the structure of a webpage. HTML documents are made up of nodes; these can be element nodes (like `<div>, <p>, <a>`), text nodes (the actual text within those elements), and even attribute nodes (attributes of elements, like `href` in an `<a>` tag).
 
-The document tree is hierarchical, resembling a family tree, with branches that represent parent-child relationships (these are not my words, it is used in the web design world). For example, if a <div> contains a <p> (paragraph), the <div> is considered the parent node, and the <p> is its child node. The <p> is also a sibling of any other elements that are children of the same parent.
+The document tree is hierarchical, resembling a family tree, with branches that represent parent-child relationships (these are not my words, it is used in the web design world). For example, if a `<div>` contains a `<p>` (paragraph), the `<div>` is considered the parent node, and the `<p>` is its child node. The `<p>` is also a sibling of any other elements that are children of the same parent.
 
 :::{.callout-note} 
 The more you start to scrape websites, the more you will get used to reading the HTML source code. It is not as difficult as it seems at first. However, websites can be terribly messy and badly coded. This is why you will often have to try different things and see what works. Troubleshooting, as in every coding setting, is key.

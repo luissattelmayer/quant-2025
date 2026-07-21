@@ -11,18 +11,16 @@ These are the main points of today's session and script:
 2. What is Base R and what are packages?
 3. A recap of basic coding in R
 4. Building & Interpreting a simple linear model
-5. Visualizing Residuals
+5. Visualizing Coefficient Estimates
 6. The `broom` package (OPTIONAL!)
 
 These are the packages we will be using in this session: 
 
 ```{r}
-needs(
-  tidyverse,
-  rio, 
-  stargazer,
-  broom,
-)
+library(tidyverse)
+library(rio)
+library(stargazer)
+library(broom)
 ```
 
 
@@ -31,17 +29,17 @@ OLS regressions are the powerhouse of statistics. The world must have been a dar
 
 As a quick reminder, this is the formula for a basic linear model: $\widehat{Y} = \widehat{\alpha} + \widehat{\beta} X$.
 
-OLS is a certain kind of method of linear model in which we choose the line which has the least prediction errors. This means that it is the best way to fit a line through all the residuals with the least errors. It minimizes the sum of the squared prediction errors $\text{SSE} = \sum_{i=1}^{n} \widehat{\epsilon}_i^2$
+OLS is a method for estimating a linear model in which we choose the line with the smallest prediction errors. Out of all possible lines, OLS picks the one that minimizes the sum of the squared prediction errors (the *residuals*): $\text{SSE} = \sum_{i=1}^{n} \widehat{\epsilon}_i^2$
 
 Five main assumptions have to be met to allow us to construct an OLS model:
 
 1.  Linearity: Linear relationship between IVs and DVs
-2.  No endogeneity between $y$ and $x$
+2.  Exogeneity: the error term is uncorrelated with the independent variables ($E[\epsilon|X] = 0$); if a regressor is correlated with the error term, we speak of *endogeneity*
 3.  Errors are normally distributed
 4.  Homoscedasticity (variance of errors is constant)
-5.  No multicolinearity (no linear relationship between the independent variables)
+5.  No multicollinearity (no linear relationship between the independent variables)
 
-For this example, I will be working with some test scores of a midterm and a final exam which I once had to work through. We are trying to see if there is a relationship between the score in the midterm and the grade of the final exam. Theoretically speaking, we would expect most of the students who did well on the first exam to also get a decent grade on the second exam. If our model indicates a statistical significance between the independent and the dependent variable and a positive coefficient of the former on the latter, this theoretical idea then holds true.
+For this example, I will be working with data from the tenth wave of the [European Social Survey](https://www.europeansocialsurvey.org/) (ESS), a cross-national survey of attitudes and behavior. We will try to see whether socio-demographic characteristics of respondents -- such as age, income, gender, and religiosity -- are related to their attitudes towards economic redistribution.
 
 ## Coding Recap
 
@@ -53,7 +51,7 @@ To load the packages, we are going to need:
 library(tidyverse)
 ```
 
-Next we will import the dataset of grades.
+Next we will import the ESS dataset.
 
 ```{r}
 ess <- read_csv("data/ess_10.csv")
@@ -72,7 +70,7 @@ data <- read_csv("~/Desktop/folder/ess_10.csv")
 ```
 
 :::{.callout-important} 
-I will be only working within [.Rproj files](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) and so should you. [^session1-1] This is the only way to ensure that your working directory is always the same and that you do not have to change the path to your data set every time you open a new RStudio session. Further, this is the only way to make sure that other collaborators can easily open your project and work with it as well. Simply zip the file folder in which you have your code and
+I will be only working within [.Rproj files](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) and so should you. [^session1-1] This is the only way to ensure that your working directory is always the same and that you do not have to change the path to your data set every time you open a new RStudio session. Further, this is the only way to make sure that other collaborators can easily open your project and work with it as well. Simply zip the folder in which you have your `.Rproj` file, your code, and your data, send it to your collaborators, and everything will run on their machine without changing a single file path.
 
 :::
 
@@ -120,24 +118,15 @@ ess <- ess |>
 ess$cntry |> table()
 ```
 
-For this exercise, I would like to predict the 
+For this exercise, I would like to predict attitudes towards economic redistribution, measured by the variable `gincdif`.
 
-Let's inspect our data for now: 
+Let's inspect our dependent variable first:
 
 ```{r}
 ess$gincdif |> summary()
 ```
 
-
-```{r}
-ess <- ess |> 
-  mutate(gincdif = case_when(
-    is.na(gincdif) ~ mean(gincdif, na.rm = TRUE),
-    TRUE ~ gincdif
-  ))
-
-ess$gincdif |> summary()
-```
+The variable ranges from 1 to 5 and has some missing values (`NA`s). We will leave the missing values as they are: `lm()` automatically drops observations with missing values on any variable in the model (so-called *listwise deletion*). Resist the temptation to replace missing values on your dependent variable with the mean -- imputing the outcome adds no information to the model and can bias your estimates.
 
 
 
@@ -146,7 +135,7 @@ Now that we have set up our data frame, we can build our OLS model. For that, we
 
 In this example, I will predict views on redistribution and income inequalities measured through the variable `gincdif`. This will be our *dependent variable* (DV). The exact phrasing of the question is the following: 
 
-> Using this card, please say to what extent you agree or disagree with the following statement: The govenrment should take measeures to reduce differences in income levels.
+> Using this card, please say to what extent you agree or disagree with the following statement: The government should take measures to reduce differences in income levels.
 
   > 1. Agree strongly
   > 2. Agree
@@ -166,7 +155,7 @@ ess <- ess |>
 
 
 
-We can run an OLS model because this variable is *continuous*. If this were a categorical or binary dependent variable, we would have to change our modeling approach. This is something that is covered in Chapters 2 and 3.
+Strictly speaking, `gincdif` is an *ordinal* variable: it has five ordered response categories. Treating such Likert-type items as if they were continuous is a very common practice in applied research, and we will follow it here so that we can use OLS. Keep in mind, however, that this is a simplifying assumption. If our dependent variable were categorical or binary, we would have to change our modeling approach altogether. This is something that is covered in Chapters 2 and 3.
 
 ```{r}
 ess_model <- lm(gincdif ~ age + hinctnta + gndr + rlgatnd, data = ess)
@@ -191,13 +180,14 @@ stargazer(ess_model,
           star.cutoffs = c(0.05, 0.01, 0.001),
           # changing the label of the DV
           dep.var.labels = "Attitudes towards economic redistribution",
-          # renaming the IVs
+          # renaming the IVs: the labels are applied in the order in which
+          # the variables appear in the table (the intercept comes last!)
           covariate.labels = c(
-            "(Intercept)" = "Intercept",
-            "age" = "Age", 
-            "hinctnta" = "Household Income",
-            "gndr2" = "Women", 
-            "rlgatnd" = "Religiosity (Attendance)"
+            "Age",
+            "Household Income",
+            "Women",
+            "Religious Attendance",
+            "Intercept"
             )
           )
 
@@ -217,13 +207,15 @@ The $\beta$-coefficients tell us about the direction and strength of the associa
 
 Let's interpret the above regression table. Always bear in mind what a change of values would correspond to on the measurement scale of your dependent variable. In our case, higher values correspond to *opposition towards redistribution*, while lower values correspond to *being in favor* of redistribution:
 
-1. **Age** is positively and significantly associated with attitudes towards economic redistribution. A one-unit increase in age corresponds to a 0.044 increase in the dependent variable, meaning older individuals tend to oppose economic redistribution more than younger ones.
+1. **Age** is negatively and significantly associated with opposition towards economic redistribution. A one-year increase in age corresponds to a 0.002 decrease in the dependent variable, meaning that older individuals tend to be slightly *more* in favor of redistribution than younger ones. Note that while this coefficient is statistically significant, it is substantively tiny: even a 50-year age difference only moves the expected value of the dependent variable by about 0.1 points on a five-point scale. Statistical significance and substantive importance are not the same thing!
 
-2. **Household income** is negatively and significantly associated with attitudes toward redistribution. A one-unit increase in income corresponds to a 0.048 decrease in opposition for redistribution. The model *seems* to indicate that richer people tend to be more in favor of redistribution.
+2. **Household income** is positively and significantly associated with opposition towards redistribution. A one-decile increase in household income corresponds to a 0.045 increase in the dependent variable: richer respondents tend to be more opposed to redistribution. This is what we would expect theoretically, as higher-income households would be the ones paying for redistributive policies.
 
-3. The coefficient for the **gender** variable suggests that women have significantly more negative attitudes towards redistribution compared to men. The coefficient size is 0.030, meaning women are slightly more opposed to redistribution.
+3. The coefficient for the **gender** variable (-0.049) tells us that women are, on average, significantly more in favor of redistribution than men -- a finding that is well established in the literature on welfare state attitudes.
 
-Bear in mind that this model is not a good model! It only contains four independent variables and we are likely omitting some other important predictors that would change the model outcomes substantively. It is very likely that we have a case of *Omitted Variable Bias* in our model. This is probably the worst bias to have in your model because the omission or inclusion of certain variables over others not only change your standard errors but also the direction of association of your coefficients. Hence, the admittedly extremely counterintuitive result that richer people tend to be more in favor of redistribution than lower-income households. 
+4. **Religious attendance** is positively and significantly associated with opposition towards redistribution (0.030). Be careful with the direction here: in the ESS, `rlgatnd` is coded from 1 (*attends religious services every day*) to 7 (*never attends*). Higher values therefore mean *less* religious attendance, so the positive coefficient tells us that respondents who attend religious services less often are more opposed to redistribution. Always check the codebook before interpreting a coefficient!
+
+Bear in mind that this model is far from perfect! It only contains four independent variables and we are likely omitting other important predictors -- education, employment status, or political ideology, for example. If an omitted variable is correlated with both an included predictor and the dependent variable, we have a case of *Omitted Variable Bias* (OVB): our estimated coefficients will be biased, potentially even pointing in the wrong direction. This is one of the most important threats to any regression analysis, and you should always ask yourself which relevant variables your model might be missing.
 
 There are also some additional information on the table that tell us more about the model fit, its performance so to say:
 
@@ -232,8 +224,8 @@ There are also some additional information on the table that tell us more about 
 -   **Residual Std. Error**: The residual standard error is a way to measure the average distance between the line you've drawn (your model's predictions) and the actual data points. It's like measuring how far off the line is from the actual dots on the graph. Another way to think about this is like a test where you want to get as many answers correct as possible and if you are off by a lot in your answers, the residual standard error would be high, but if you are only off by a little, the residual standard error would be low. So in summary, lower residual standard error is better, as it means that the model is making predictions that are closer to the true values in the data.
 -   **F Statistics**: The F-statistic is like a test score that tells you how well your model is doing compared to a really simple model. It's a way to check if the model you've built is any better than just guessing. A large F-statistic means that your model is doing much better than just guessing.
 
-### Visualizing the Regression Line
-Just for fun and to refresh you `ggplot` knowledge, let's visualize the regression line. Here, we specify 
+### Visualizing the Coefficient Estimates
+Just for fun and to refresh your `ggplot` knowledge, let's visualize the results of our model in a so-called *coefficient plot*. Instead of a table, we plot each coefficient as a point, with a horizontal bar representing its 95% confidence interval. First, we use `broom::tidy()` to turn the model output into a data frame (including confidence intervals) and remove the intercept, which is usually not of substantive interest. Then we plot the estimates with `ggplot`:
 
 
 
@@ -256,7 +248,7 @@ tidy_ess_model |>
 ```
 
 
-Remember how I told you above that OLS was about finding the smallest amount of squared errors! This is what we can visualize here. The red lines are the distance from the residuals to the fitted line. The OLS line is the line that minimizes the sum of the squared errors! 
+This type of plot makes it very easy to see the direction, size, and precision of each estimate at a glance: coefficients whose confidence interval does not cross the vertical line at zero are statistically significant at the 5% level. Coefficient plots are often a much more reader-friendly way of communicating regression results than tables -- especially in presentations.
 
 
 
@@ -273,7 +265,7 @@ Nesting in the context of the `broom` package usually refers to the idea of crea
 
 Let's go back to the ESS which I have used before. The data was collected within countries, and depends on the country context. In other -- more statistical terms -- this means that the data is *nested* within countries.
 
-I can group my observations by class using `group_by()` and then nest them within these groups. The output will only contain as many rows as we have countries, and each row will contain a tibble with the observations of the respective class. 
+I can group my observations by country using `group_by()` and then nest them within these groups. The output will only contain as many rows as we have countries, and each row will contain a tibble with the observations of the respective country.
 
 ```{r}
 ess |> 
@@ -281,7 +273,7 @@ ess |>
   nest()
 ```
 
-That is a very simple application of a nesting process. You can `group_by()` and `nest()` by many different variables. You might want to nest your observations per year or within countries. You can also nest by multiple variables at the same time. We will see this idea again in the next session when we will talk about the `purrr` package and how to [automatically run regressions](../session2/session2.html#automatic-regressions-for-several-countries) for several countries at the same time
+That is a very simple application of a nesting process. You can `group_by()` and `nest()` by many different variables. You might want to nest your observations per year or within countries. You can also nest by multiple variables at the same time. We will see this idea again in the next session when we will talk about the `purrr` package and how to [automatically run regressions](../session4/session4.html#automatic-regressions-for-several-countries) for several countries at the same time.
 
 
 ### Model estimates with `tidy()`
@@ -290,7 +282,7 @@ That is a very simple application of a nesting process. You can `group_by()` and
 library(broom)
 ```
 
-The `tidy()` function takes statistical output ofa model and turns it into a tidy tibble. This means each row is an observation (e.g., a coefficient in a regression output) and each column is a variable (e.g., estimate, standard error, statistic). For instance, after fitting a linear model, you can use `tidy()` to create a data frame where each row represents a coefficient, with columns for estimates, standard errors, t-values, and p-values.
+The `tidy()` function takes the statistical output of a model and turns it into a tidy tibble. This means each row is an observation (e.g., a coefficient in a regression output) and each column is a variable (e.g., estimate, standard error, statistic). For instance, after fitting a linear model, you can use `tidy()` to create a data frame where each row represents a coefficient, with columns for estimates, standard errors, t-values, and p-values.
 
 ### Key metrics with `glance()`
 `glance()` provides a one-row summary of a model's information. It captures key metrics that describe the overall quality or performance of a model, like $R^2$, AIC, BIC in the context of linear models. This is useful for getting a quick overview of a model's performance metrics.
@@ -298,7 +290,7 @@ The `tidy()` function takes statistical output ofa model and turns it into a tid
 ### Residuals with `augment()`
 The `augment()` function adds information about individual observations to  the original data, such as fitted values or residuals in a regression model. You want to do this when you are evaluating a model fit at the observation level, checking for outliers, or understanding the influence of individual data points. We will talk more about model diagnostics in the next session!
 
-Let's take a look at how this would work out in practice. For simplicity sake, we will set the `nest()` logic aside for a second and only look at the `tidy()`, `glance()`, and `augment()` functions. 
+Let's take a look at how this would work out in practice. For simplicity's sake, we will set the `nest()` logic aside for a second and only look at the `tidy()`, `glance()`, and `augment()` functions. 
 
 Here I only build the same model that we have already seen above: 
 
@@ -324,6 +316,14 @@ augment(ess_model)
 
 
 ### What is a tibble? {#tibble}
+
+A tibble is the `tidyverse`'s modern take on the classic R `data.frame`. For most purposes you can use the two interchangeably, but tibbles have a few advantages that make them more pleasant to work with:
+
+1. **Nicer printing**: a tibble only prints the first ten rows and as many columns as fit on your screen, together with each column's data type. A `data.frame` will happily flood your console with thousands of rows.
+2. **No surprises**: tibbles never change the type of your inputs (e.g., they never convert strings to factors behind your back) and never change the names of your variables.
+3. **List-columns**: as we saw in the section on [nesting](#nesting), a column of a tibble can itself contain a list of data frames or model objects. This is what makes the nested workflows above possible.
+
+Whenever you import data with `read_csv()` or wrangle it with `tidyverse` functions, the result is already a tibble -- so chances are you have been working with tibbles all along without noticing. If you ever need to convert a classic `data.frame` manually, you can do so with `as_tibble()`.
 
 ```{=html}
 <style>body {text-align: justify}</style>

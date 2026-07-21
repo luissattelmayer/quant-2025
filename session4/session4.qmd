@@ -7,7 +7,7 @@ author: "Luis Sattelmayer"
 
 You have seen the logic of Logistic Regressions with Professor Rovny in the lecture. In this lab session, we will understand how to apply this logic to R and how to build a model, interpret and visualize its results and how to run some diagnostics on your models. 
 
-If the time allows it, I will also show you how automatize the construction of your model and run several logistic regressions for many countries at once.
+If the time allows it, I will also show you how to automate the construction of your model and run several logistic regressions for many countries at once.
 
 These are the main points of today's session and script: 
 
@@ -93,7 +93,7 @@ ess <- read_csv("ESS_10_fr.csv") |>
     uemp12m,
     uemp5yr
   ) |>
-  filter(cntry != "FR")
+  filter(cntry == "FR")
 ```
 
 This only leaves us with the values for France!
@@ -122,13 +122,13 @@ Here we can see that the variable vote contains the numeric values of 1 to 3 and
 
 The meaning behind the values of 7, 8, and 9 are quite common and you will find them in almost all data sets which were made out of surveys. Respondents might not want to give an answer, the answer was not able to be read, or they indicated that they did not remember. 
 
-**Spoiler alert: We will work on voter turnout this session**: Therefore, we will try to see what makes people vote and what decreases the likelihood that they vote at election day. The question of our dependent variable will thus be: *Has the respondent voted or not?*. Mathematically, this question cannot be answered with a linear regression which uses the OLS method as the dependent variable is *binary* meaning that 0 = has not voted/1 = has voted. There is only two possible outcomes and the variable is not continuous (one of the assumptions of an OLS). 
+**Spoiler alert: We will work on voter turnout this session**: Therefore, we will try to see what makes people vote and what decreases the likelihood that they vote at election day. The question of our dependent variable will thus be: *Has the respondent voted or not?*. Mathematically, this question cannot be answered well with a linear regression which uses the OLS method as the dependent variable is *binary* meaning that 0 = has not voted/1 = has voted. There are only two possible outcomes, and a linear model would happily predict probabilities below 0 or above 1, which makes no sense for a binary outcome. 
 
 But if we were to use the variable on voting turnout as it is right now, we would neither have a binary variable nor have a reliable variable as it contains values in which we are both not interested in and that will skew our estimations strongly. In fact, we cannot do a logistic regression (logit) on variables other than binary. 
 
 Thus, we first need to transform our dependent variable. We need to get rid of unwanted values and transform the 1s and 2s in 0s and 1s.
 
-First we will get rid of the unwanted values in which we are not interested. You could technically now filter out the values as shown below. I recommend not doing this but instead transforming the values within the variable to `NA`. These rows will be omitted in a regression but if ever you choose to run a second model with another dependent variable you risk loosing observations that you have fully omitted/filtered out by using `filter()`. Therefore, you could take it as a rule of thumb to only filter for values if you are unsure you will never need them afterwards.
+First we will get rid of the unwanted values in which we are not interested. You could technically now filter out the values as shown below. I recommend not doing this but instead transforming the values within the variable to `NA`. These rows will be omitted in a regression but if ever you choose to run a second model with another dependent variable you risk losing observations that you have fully omitted/filtered out by using `filter()`. Therefore, you could take it as a rule of thumb to only filter for values if you are unsure you will never need them afterwards.
 
 ```{r}
 #| eval: false
@@ -150,16 +150,15 @@ case_when(
 )
 ```
 
-Let's look at an example below. I want the values 3, 7, 8, and 9 to take on `NA` as a value within the vote variable, as they are meaningless to our analysis. We open mutate, assign a column, which I will call like the old varible `vote`. Within this `case_when()`, I put `vote %in% c(3, 7, 8, 9) ~ NA_integer_`. This reads as follows: whenever vote contains the values of 3, 7, 8, or 9 assign it NA_integer. The following line `TRUE ~ vote` means that whenever that is not the case, I want to keep the values that `vote` initially already had. It is a sort of special catch-all rule: `TRUE ~ vote`. This is like saying, "For anyone else, or any situation I didn't mention, assign the initial vote values".
+Let's look at an example below. I want the values 3, 7, 8, and 9 to take on `NA` as a value within the vote variable, as they are meaningless to our analysis. We open mutate, assign a column, which I will call like the old variable `vote`. Within this `case_when()`, I put `vote %in% c(3, 7, 8, 9) ~ NA_integer_`. This reads as follows: whenever vote contains the values of 3, 7, 8, or 9 assign it NA_integer. The following line `TRUE ~ vote` means that whenever that is not the case, I want to keep the values that `vote` initially already had. It is a sort of special catch-all rule: `TRUE ~ vote`. This is like saying, "For anyone else, or any situation I didn't mention, assign the initial vote values".
 
 ```{r}
-ess <- ess |> 
+ess <- ess |>
   mutate(
     vote = case_when(
       vote %in% c(3, 7, 8, 9) ~ NA_integer_,
-      TRUE ~ vote)
-  )
-
+      TRUE ~ vote
+  ))
 
 ```
 
@@ -176,7 +175,8 @@ Perfect, now we just need to transform the ones and twos into zeros and ones. Th
 ess <- ess |> 
   mutate(vote = case_when(
     vote == 1 ~ 1, 
-    vote == 2 ~ 0
+    vote == 2 ~ 0, 
+    TRUE ~ vote
   ))
 
 table(ess$vote)
@@ -312,13 +312,17 @@ First the really boring and technical definition: The coefficients of a logistic
 
 The *odds ratio*, which can be calculated from the coefficients (we will see how that works in a moment -- exponentiation is the key word), represents the ratio of the odds of the outcome for a particular value of the predictor variable compared to the odds of the outcome for a reference value of the predictor variable. An odds ratio greater than 1 indicates that the predictor variable is positively associated with the outcome, while an odds ratio less than 1 indicates that the predictor variable is negatively associated with the outcome.
 
-It's also important to keep in mind that a logistic regression model makes assumptions about the linearity, independence, and homoscedasticity of the data and model. If these assumptions are not met it can affect the model's performance and interpretation. We will see the diagnostics of (logistic) regression models again next session.
+It's also important to keep in mind that a logistic regression model comes with assumptions too: the relationship between the predictors and the *log-odds* of the outcome is assumed to be linear, the observations are assumed to be independent of each other, and there should be no perfect multicollinearity among the predictors. (Note that homoscedasticity, which you know from OLS, is *not* an assumption of logistic regression -- in a binomial model, the variance is a function of the predicted probability by construction.) If these assumptions are not met it can affect the model's performance and interpretation. We will see the diagnostics of (logistic) regression models again next session.
 
 Is this really dense, and did I lose you? It is dense, but I hope you stick with me because we will see that it becomes much clearer once we apply this theory to our model. It will also make more sense once we exponentiate the coefficients (essentially reversing the logarithm) and interpret them as odds ratios.
 
-But from a first glimpse at our model summary we can see that most of our IVs are statistically significant, meaning that their p-value is <.05! I will not regard any other variable that is not statistically significant as you do not usually interpret non-significant variables. 
+From a first glimpse at our model summary we can see that three of our IVs are statistically significant (p \< .05): political interest, trust in politicians, and feeling close to a party. The other four (trust in parties, gender, year of birth, and education) are not statistically significant in this model. I will only interpret the statistically significant variables, as you do not usually interpret non-significant coefficients.
 
-Next, we can already say that the association of interest, closeness to party and age with voting behavior is negative. This is quite logical and makes sense in our case. If we look at the scales on which these variables are coded (code book!), we can see that the higher the value of the variable, the less interested, close or aged the respondents were. Thus, it decreases their likelihood to vote on voting day. Trust in politicians is coded the other way around. If I had been a little more thorough, it would have been good to put each independent variable on the same scale... But it means that trust in politicians (in fact meaning that they trust them less) raises the likelihood of not voting somehow (positive association). 
+Pay close attention to how each variable is coded (code book!) before interpreting the direction of the effects:
+
+- **Political interest** (`polintr`) has a negative coefficient. In the ESS, this variable runs from 1 (*very interested*) to 4 (*not at all interested*) -- higher values mean *less* interest. The negative coefficient therefore tells us that less politically interested respondents are less likely to vote. That is exactly what we would expect.
+- **Feeling close to a party** (`clsprty`) also has a negative coefficient. We recoded it so that 1 = *does not feel close to any party*. Respondents without a party attachment are thus considerably less likely to vote -- again very plausible.
+- **Trust in politicians** (`trstplt`) has a positive coefficient. This variable runs from 0 (*no trust at all*) to 10 (*complete trust*), so higher values mean *more* trust. The positive coefficient therefore means that respondents with more trust in politicians are more likely to vote. A perfectly intuitive result -- but notice that we could only establish this by checking the coding direction of every variable first!
 
 #### Odds-ratio
 If you exponentiate the coefficients of your model, you can interpret them as odds-ratios. Odds ratios (ORs) are often used in logistic regression to describe the relationship between a predictor variable and the outcome. ORs are easier to interpret than the coefficients of a logistic regression because they provide a measure of the change in the odds of the outcome for a unit change in the predictor variable.
@@ -353,7 +357,7 @@ exp(cbind(
   OR = coef(logit), 
   confint(logit)))
 ```
-This exponentiated value, the **odds ratio** (OR), now allows us to say that for a one unit increase in political interest, for example, the odds of voting (versus not voting) decrease. The same goes for the other variables. 
+This exponentiated value, the **odds ratio** (OR), now allows us to say that for a one-unit increase in `polintr` -- i.e., moving one step towards *less* political interest -- the odds of voting (versus not voting) decrease, since the OR is below 1 (0.58). Compare this with trust in politicians, whose OR is above 1 (1.14): each additional point of trust increases the odds of voting. The direction of each OR (above or below 1) always mirrors the sign of the corresponding coefficient.
 
 The last thing about odds-ratio and I hope that this is the easiest to interpret, is when you try to make percentages out of it: 
 
@@ -361,7 +365,7 @@ The last thing about odds-ratio and I hope that this is the easiest to interpret
 100*(exp(logit$coefficients[-1])-1)
 ```
 
-This allows us to say that being politically uninterested decreases the *odds* of voting by 44%. Much more straightforward right?
+This allows us to say that each one-unit step towards less political interest decreases the *odds* of voting by about 42%. Much more straightforward right?
 
 #### Predicted Probabilities
 All in all, we could now present a table of the odds ratios and write our paper. But visualizations of results tell a much better story. In this section, I will show you how to calculate predicted probabilites, and then how to plot them in a nice way.
@@ -381,11 +385,11 @@ In the years prior, I used to teach students how to do this by hand, only to the
 
 
 ```{r}
-# this package contains everything we need craft predicted probabilities and
-# visualize them as well
+# this package contains everything we need to craft predicted probabilities
+# and visualize them as well
 library(ggeffects)
 
-# like the predcit() function of Base R, we use ggpredict() and specify
+# like the predict() function of Base R, we use ggpredict() and specify
 # our variable of interest
 predicted_probs <- ggpredict(logit, terms = "polintr")
 
@@ -576,7 +580,7 @@ country_model <- function(df) {
 }
 ```
 
-:::{callout-info}
+::: {.callout-note}
 I will first talk you through the different steps and then provide you one long pipeline that does all this in one step.
 :::
 
@@ -584,12 +588,20 @@ I will first talk you through the different steps and then provide you one long 
 First, I import the ESS data and select the variables I want to use. I also clean the data a bit and get rid of unwanted observations or values.
 
 ```{r}
-# Recoding the 'vote' variable to binary (1 or 0)
-# and filtering the dataset based on specified criteria
-prepared_ess <- ess |> 
-  mutate(vote = ifelse(vote == 1, 1, 0)) |> 
+# We start again from the raw data (all countries this time!) and select
+# our variables
+ess_all <- read_csv("ESS_10_fr.csv") |>
+  select(cntry, vote, polintr, trstplt, trstprt, clsprty,
+         gndr, yrbrn, eduyrs)
+
+# Filtering the dataset to valid values FIRST, and only then recoding
+# the 'vote' variable to binary (1 or 0). The order matters: if we recoded
+# first with ifelse(vote == 1, 1, 0), the codes for "not eligible" (3),
+# "refusal" (7), "don't know" (8) and "no answer" (9) would all silently
+# become 0 and be counted as abstentions!
+prepared_ess <- ess_all |>
   filter(
-    vote %in% c(0:1),
+    vote %in% c(1:2),
     polintr %in% c(1:4),
     clsprty %in% c(1:2),
     trstplt %in% c(0:10),
@@ -597,7 +609,8 @@ prepared_ess <- ess |>
     gndr %in% c(1:2),
     yrbrn %in% c(1900:2010),
     eduyrs %in% c(0:50)
-  )
+  ) |>
+  mutate(vote = ifelse(vote == 1, 1, 0))
 
 ```
 
@@ -612,34 +625,14 @@ Then we will `nest()` the data as described here where I explain the logic of [n
 library(pscl)
 library(broom)
 
-ess <- read_csv("ESS_10_fr.csv") |>
-  select(cntry,
-         vote,
-         polintr,
-         trstplt,
-         trstprt,
-         clsprty,
-         gndr,
-         yrbrn,
-         eduyrs)
-
-ess_model <- ess |> 
-  as_tibble() |>  # Convert the data frame to a tibble
-  mutate(vote = ifelse(vote == 1, 1, 0)) |>
-  filter(
-    vote %in% c(0:1),
-    polintr %in% c(1:4),
-    clsprty %in% c(1:2),
-    trstplt %in% c(0:10),
-    trstprt %in% c(0:10),
-    gndr %in% c(1:2),
-    yrbrn %in% c(1900:2010),
-    eduyrs %in% c(0:50)
-  ) |>
+# prepared_ess was created above: raw data for all countries, filtered to
+# valid values first and with vote recoded to 0/1 afterwards
+ess_model <- prepared_ess |>
   group_by(cntry) |>
   nest() |>
   mutate(
     model = map(data, country_model),
+    # exponentiate = TRUE returns odds ratios (and exponentiated CIs)
     tidied = map(model, ~ tidy(.x, conf.int = TRUE, exponentiate = TRUE)),
     glanced = map(model, glance),
     augmented = map(model, augment),
@@ -651,7 +644,7 @@ ess_model <- ess |>
 
 
 ```{r}
-# Comparing AICs
+# McFadden pseudo R2 (and other fit measures) for our French model
 pR2(logit)
 
 ess_model |>
@@ -665,19 +658,23 @@ ess_model |>
 
 ```{r}
 #| message: false
-# Comparing coefficients
+# Comparing coefficients. Careful: tidy() was called with
+# exponentiate = TRUE above, so `estimate`, `conf.low` and `conf.high`
+# already ARE odds ratios -- exponentiating them again here would be wrong!
 ess_model |>
   unnest(tidied) |>
   filter(term == "polintr") |>
   ggplot(aes(
     reorder(cntry, estimate),
-    y = exp(estimate),
+    y = estimate,
     color = cntry,
-    ymin = exp(conf.low),
-    ymax = exp(conf.high)
+    ymin = conf.low,
+    ymax = conf.high
   )) +
   geom_errorbar(width = 0.4) +
   geom_point() +
+  # reference line: an odds ratio of 1 means "no association"
+  geom_hline(yintercept = 1, linetype = "dashed") +
   ylab("Odds-Ratio of political interest") +
   xlab("Country") + 
   coord_flip() +

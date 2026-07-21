@@ -2,3 +2,5 @@
 .Rproj.user
 homework-1/
 .httr-oauth
+
+**/*.quarto_ipynb

@@ -2,38 +2,33 @@
 
 ## Introduction
 
-This week's R session will introduce you to the logic of time series cross section in RStudio. Be aware that just because it sounds very impressive does not mean that we need to be in awe. It is rather straight forward and once you can wrap your head around it, you will see that -- as always -- the actual coding part is not that complicated (except but... we still have to manage our data).
+This week's R session will introduce you to the logic of time series cross section in RStudio. Be aware that just because it sounds very impressive does not mean that we need to be in awe. It is rather straight forward and once you can wrap your head around it, you will see that -- as always -- the actual coding part is not that complicated (but, as ever, we still have to manage our data).
 
-This week's session will also introduce you to a dataset which you have not seen: the *Comparative Manifesto Project* (CMP) or also referred to as [*Manifesto Research on Political Representation*](https://manifesto-project.wzb.eu/%7D%7Bhttps://manifesto-project.wzb.eu/). If you are only interested in party positions based on their manifestos, and thus only in intervals of 4-5 years, it is a great source for everything that has to do with party positions and political competition over time, within party families or within several countries -- or everything all at once.
+This week's session will also introduce you to a dataset which you have not seen: the *Comparative Manifesto Project* (CMP) or also referred to as [*Manifesto Research on Political Representation*](https://manifesto-project.wzb.eu/). If you are only interested in party positions based on their manifestos, and thus only in intervals of 4-5 years, it is a great source for everything that has to do with party positions and political competition over time, within party families or within several countries -- or everything all at once.
 
 The idea of the CMP is that individual human-coders split the party manifestos for each party at each election into quasi-sentences and attribute it to a certain topic. The topics are predefined and go back to the saliency theory of @budge_explaining_1983. In their pre-definition, they are also attributed to either left-wing politics or right-wing politics. The idea of the saliency theory is that parties will only emphasize those issues which are favorable to them. Therefore, we can place parties in a (one- or two-dimensional) space. Examining these estimates of party positions over time can give us insights on party competition.
 
 I could spend hours talking about how to model party competition. But according to Jan, I spend way too much of my time thinking about models and operationalizations, which is why I will not bother you with my thoughts on the CMP and its advantages or inconveniences. Let me say this at least: the CMP is a powerful and widely used database; it relies, however, on very very strong assumptions, which can be problematic. If you are interested in party competition and party positions, feel free to contact me or come see me after class. Also, here are some references, which you might want to consult to check out scientific publications using the CMP or articles evaluating the validity of the CMP's measures; for different uses of the CMP: @green_owning_2008 or @adams_policy_2009; for critical evaluations of the CMP: @dinas_measuring_2010, @gemenis_what_2013, @ruedin_estimating_2019.
 
-\par
 
 ### Some Thoughts on Time Series in general...
 
 Now, you might be wondering if you are ever going to use these seemingly incomprehensible formulas, equations and terms like Error Correction Model, lagged dependent variable or structural equation approach. The boring answer is that this is up to you. It was up to me too at one point. Remember that I took this class too, had my mind made up about a multinomal model I wanted to do and was pretty sure that I would never dig deeper into time series. Little did I know that your research interests sometimes force you to learn methods you thought you would never need. This happened to me a couple months later, when at the beginning of my third semester I wanted to work on parties and the evolution of party positions *in response* to other party's shifts. Jan suggested that I would have to look at time series at some point. I did and I have come to hate and to like them. 
 
-\par
 
 Time series are one of the best statistical methods to understand social and many other change(s) over time. They allow you to understand causal relationships between many kinds of variables over time and most importantly the drivers of that relationship or change across time. There is a huge abundance of questions that relate to changes over time that we are interested in explaining. It does not have to be limited to my boring party competition stuff: what about crime and approval ratings, and then trying to see whether there is a statistical relationship between increases in crime and decreases in approval ratings.
 
-\par
 
 ### ... and more specifically on Time Series in R
 
 This is now the 6th session and you might still believe me that R can be fun, and that it can be easy in some cases. The logic and math behind time series analysis can be tricky, I am aware of that. But you will see that many things are taken care of by packages like the `plm`, `fixest`, or `tseries` packages for panel data analysis (Whatever that is for now...) or general time series analyses. Some things we still need to do ourselves, especially the specification of our ARIMA models which you have seen in Jan's class. I will try to further give you some help on that as well as some other tricks!
 
-\par
 
 ## What is Time Series Cross Section (TSCS)?
 
 I suppose you have seen this with Jan, so I am only going to briefly recapitulate the idea of TSCS. Generally speaking, we have two things going on with which we can have a lot of data fun. First, we have observations for more than one unit (e.g., countries, parties) and for more than one point in time. If you wish to work with TSCS models, you first need to find a dataset that has enough observations *over time* and *in more than one unit*. As a rough guesstimation, I would say 20 observations at least as the bare minimum, ideally many more. Unfortunately, this is where data availability can be an issue. In the next paragraphs, I will try to show you what we need to understand to conduct TSCS analyses in R. For all the tricky math stuff, please refer to Jan's lecture which gives a much better and thorough overview on everything that is going on underneath the hood of TSCS and its assumptions. If you have any questions on this, he is the better reference than me but I can try my best in answering your questions.
 
 
-\par
 
 ### Data Structure
 
@@ -58,7 +53,6 @@ As we will work with the CMP, I know that we have enough observations to have ti
 
 Here we have a structure that allows us to do TSCS models. The data is structured in a way that it follows the order of unit per year.
 
-\par
 
 ## The Comparative Manifesto Project
 
@@ -104,9 +98,8 @@ cmp <- read_csv("data/cmp.csv") |>
 
 ### Quick excursion: the `stringr` package
 
-In the last line of the code, I create a new variable called year. Since the CMP is based on party manifestos, the initial `date` variable is estimated for the respective election day. But we are only interested in the year that the election took place. The function I use, `str_sub()` is from the `stringr` package which is one of the most useful ones you can find in R. We will talk about it again in the next session when we will have to transform textual data in R. What this function does is that it will take the first \textit{to} the fourth character of the variable and substract/delete all the others. I do this because the intital date variable follows the pattern of "yyyy/mm/dd". And as I only want to have the "yyyy" part, I take the first four characters (or in our case numbers). If I wanted create a variable yearmonth for example, I would have specified `str_sub(date, 1, 6)`. By the way, if you ever want to indicate in R that you want something until the \textit{last} value of something, you can do so by specifying `-1`. In our case, let's say I only wanted to get the month and the day of the `date` variable (which would be the 5th to 8th character), I could specify it as follows: `str_sub(date, 5, -1)`.
+In the last line of the code, I create a new variable called year. Since the CMP is based on party manifestos, the initial `date` variable is estimated for the respective election day. But we are only interested in the year that the election took place. The function I use, `str_sub()` is from the `stringr` package which is one of the most useful ones you can find in R. It becomes truly indispensable once you start transforming textual data in R -- have a look at the appendix on webscraping if you want to see more of that. What this function does is that it will take the first \textit{to} the fourth character of the variable and substract/delete all the others. I do this because the intital date variable follows the pattern of "yyyy/mm/dd". And as I only want to have the "yyyy" part, I take the first four characters (or in our case numbers). If I wanted create a variable yearmonth for example, I would have specified `str_sub(date, 1, 6)`. By the way, if you ever want to indicate in R that you want something until the \textit{last} value of something, you can do so by specifying `-1`. In our case, let's say I only wanted to get the month and the day of the `date` variable (which would be the 5th to 8th character), I could specify it as follows: `str_sub(date, 5, -1)`.
 
-\par
 
 Enough theoretical talk about functions. Let's look at the left-right estimations of the CMP per party:
 
@@ -165,7 +158,6 @@ cdu |>
 
 ARIMA stands for **A**uto**r**egressive **I**ntegrated **M**oving **A**verage. All these three factors are causing headache when trying to work with time series. Why is that so you might ask? Well, we are trying to filter out anything that might influence the evolution of our series that has nothing to do with the series time variance component. In a way, we are trying to "filter" out the signal from all the noise that our series come with. At the end we want to strip our time series free of all drifts and influences and understand what is actually influencing the changes in it.
 
-\par
 
 While I am writing this, I realize that Jan gives so much better explanations on this and that it is more important that I teach you how to do all of this in R. You can estimate the order of the time series processes (autoregressive, integration, moving average) yourself by looking at the auto-correlation function (ACF) or the partial auto-correlation function (PACF). For this, use `acf()` or `pacf()`. You can then estimate the ARIMA model yourself...
 
@@ -174,6 +166,10 @@ While I am writing this, I realize that Jan gives so much better explanations on
 ```{r}
 forecast::auto.arima(spd$rile)
 ```
+
+::: {.callout-warning}
+Treat this strictly as a didactic illustration of the mechanics! Our series here consists of only about 20 observations, and German federal elections are not equally spaced in time -- ARIMA models, however, assume a regularly spaced series and generally need considerably longer series to estimate the AR, I, and MA orders reliably. In a real research setting, you would not fit an ARIMA model to a party's manifesto positions across elections.
+:::
 
 If we now had to specify an ARIMA model, this is how you would do it:
 
@@ -185,17 +181,14 @@ arima_model <- arima(spd$rile, order=c(0,0,1))
 
 All right, let's get serious about time series cross sectional models. For this week's session, we will talk about the paper by @abou-chadi_niche_2016-1. It comes with a replication dataset and replication code. Unfortunately, it is in STATA and not in R which is why I will try to replicate it as well as possible but in R.
 
-\par
 
-The article examines the question as to how the emergence of radical-right and Green parties might restructure multiparty competition and the behavior of established parties. Empirically, the paper assesses whether and how established parties adapt to the niche parties positions and issues. For the example in this script, we will focus on only half of the paper, which studies the reactions to increase in radical right party support. We will try to reproduce the TSCS model trying to prove hypothesis 1a: "Increasing radical right party support causes mainstream parties to shift toward anti-immigrant positions." (p. 423).
+The article examines the question as to how the emergence of radical-right and Green parties might restructure multiparty competition and the behavior of established parties. Empirically, the paper assesses whether and how established parties adapt to the niche parties positions and issues. For the example in this script, we will focus on only half of the paper, which studies the reactions to increase in radical right party support. We will try to reproduce the TSCS model testing hypothesis 1a: "Increasing radical right party support causes mainstream parties to shift toward anti-immigrant positions." (p. 423).
 
-\par
 
 Thus, our DV will be the mainstream parties' position on multiculturalism. [^session6-3] The coding of how to get to the position is explained in the paper or feel free to ask me after class. The variable of interest concerning H1a is the overall radical-right support at the prior election. Thus, we have a variable of radical-right support at $t-1$. The author also accounts for a variety of variables, apart from the variables of interest: party size, government participation and the natural logarithm of numbers of migrants per that year. These are all variables of which we, or rather the author and we know that they can influence positional shifts of mainstream parties.
 
 [^session6-3]: If you are wondering why we are using multiculturalism and not immigration, you're raising a good question. It is not the authors fault but problems of the CMP measures. But as I said, I will not go into too much detail on my criticism of the CMP's measures.
 
-\par
 
 This is the pooled regression equation which we will use for the time-series cross section model (first with fixed and then with random effects):
 
@@ -203,21 +196,17 @@ $Multiculturalism_{i,t} = \beta_{0}Multiculturalism_{i, t-1} + \beta_{1}Radicalr
 
 There are two ways in TSCS models, to deal with the differences between units. In our case, the units (as chosen by Abou-Chadi in the paper) are the parties. In many other cases, units might be countries. Fixed effects models differ from random effects models in the way that they take into account the differences between the unit effects.
 
-\par
 
-In a fixed effects model, we assume that the differences between parties (our units) do not vary over time. Regardless of what is happening over time, the differences between the CDU and the SPD as a party do not change. The random effects model, on the other hand, assumes that the differences between units are random and can change over time. This means that the differences between units can change based on what is happening over time. Note that both models assume that parties do have an influence on their position on multiculturalism.
+Both models start from the same idea: each unit (party) has its own time-invariant "baseline" -- the unit effect $v_i$ in the equation above. The difference lies in how this unit effect is treated. In a *fixed effects* model, each party gets its own intercept which is allowed to be correlated with the other predictors -- the model effectively only uses variation *within* each party over time, which is why it is also called the "within" estimator. A *random effects* model instead treats the unit effects as random draws from a common distribution and -- and this is the crucial assumption -- requires that these unit effects are **uncorrelated with the predictors** in the model. If that assumption holds, random effects are more efficient (they also use the variation *between* parties); if it does not hold, the random effects estimates are biased and we should prefer fixed effects. This is exactly what the Hausman test below will help us decide.
 
-\par
 
 Does that sound really abstract? It is. Maybe let's look at the way how we construct the models and then, once we interpret them, try to understand the results and FE as well as RE better.
 
-\par
 
 ### Data of @abou-chadi_niche_2016-1
 
 Here, I first import the data set which came in the paper. I downloaded it from the \href{https://dataverse.harvard.edu/}{Harvard Dataverse} which is the most comprehensive platform for datasets and reproduction data and code. If you are ever unsure of where to look for data, this is where I would start!
 
-\par
 
 I have done the job of selecting the variables as well. You can see that I also create a lagged variable in the last line of code. This will create a variable with the exact same values as `cultposition` but always one election behind. The value of `cultposition` at $t-1$ will be now at $t$ in the newly created lagged variable. I am afraid that this is not clear so I will try to reframe it less technically: A lagged variable is a variable that takes on the value of a previous time period for a given variable. In our case, `cultposition` measures the position of a party at a specific election. So, if you want to create a lagged variable of `cultposition`, you would take the value of `cultposition` for the previous election and assign it to the current election. When creating the lag of something in R, make sure to force R to take the `lag()` function from the `dplyr` package. Otherwise, it will take the one from the `stats` package which is not what we want. As these two packages are conflicting, i.e. the use the same worded function for two different things, you want to make sure that it is the right function.
 
@@ -251,9 +240,16 @@ tac <- haven::read_dta("data/cmp_abouchadi.dta") |>
     partyname,
     date
   ) |>
-  group_by("partyname") |>
+  # sort by party and election date so that lag() takes each party's own
+  # PREVIOUS election -- and group by party so that the lag never crosses
+  # party boundaries. Careful: group_by(partyname) without quotation marks!
+  # group_by("partyname") would group by the literal word "partyname"
+  # (one single group) and silently produce nonsense lags.
+  arrange(partyname, date) |>
+  group_by(partyname) |>
   # lag() from the dplyr package will create a lagged variable for cultposition
-  mutate(lag_cultposition = dplyr::lag(cultposition))
+  mutate(lag_cultposition = dplyr::lag(cultposition)) |>
+  ungroup()
 ```
 
 ### Time Series using `plm`
@@ -278,6 +274,9 @@ summary(fixed_effects)
 Now let's compare this to random effects: 
 
 ```{r}
+# note that the random effects model contains exactly the same predictors
+# as the fixed effects model -- this matters for comparing the two models
+# (and is required for the Hausman test below)
 random_effects <-
   plm(
     cultposition ~ lag_cultposition + sumright + limmig +
@@ -300,22 +299,22 @@ stargazer::stargazer(
   out = "class.txt",
   dep.var.labels = "Position on Multiculturalism",
   covariate.labels = c(
-    "Lag of Multic",
+    "Lag of Multiculturalism Position",
     "Radical Right Support at t-1",
-    "Share of Immigration",
+    "Log of Immigration",
     "Government Participation",
     "Party Size"
   )
 )
 ```
 
-If we look at our models and compare it, we do see differences in both statistical significance but also strength of effect. Remember that these are OLS regressions which is why we can interpret the coefficients directly. In both fixed and random effects models, our hypothesis on radical right support at the election prior to this one has a positive influence on the dependent variable. This means in return that mainstream competitors tend to adjust their position on multiculturalism towards more anti-multiculturalist stances if the radical-right party had a good score at the elections $t-1$.
+If we look at our models and compare them, we do see differences in both statistical significance and strength of effects. Remember that these are linear models, which is why we can interpret the coefficients directly on the scale of the dependent variable. The key result for our hypothesis: in **both** the fixed and the random effects model, radical right support at the previous election has a positive and statistically significant coefficient. Since higher values of the dependent variable correspond to more *negative* positions on multiculturalism, this means that mainstream parties tend to adjust their position towards more anti-multiculturalist stances if the radical right did well at the election at $t-1$ -- in line with hypothesis 1a.
 
-\par
+You will also notice that the coefficient of the lagged dependent variable differs strongly between the two models (it is small and insignificant in the fixed effects model, but positive and significant in the random effects model). This is a well-known phenomenon: combining a lagged dependent variable with unit fixed effects in a short panel biases the coefficient of the lag downwards -- the so-called *Nickell bias* [@nickell_biases_1981]. It is one of the reasons why applied researchers think very carefully about whether to model dynamics with a lagged dependent variable, with fixed effects, or with more specialized estimators.
+
 
 If you compare this model to the one in the Abou-Chadi paper, you can see that our results are not the same nor are the model diagnostics. This is because the author has used a slightly different model which is close to the two we are seeing here. However, we do not cover it in this class. I am hinting at PCSE (Panel Corrected Standard Error) models which were developed in quite a famous paper by @beck_what_1995.
 
-\par
 
 But you might be wondering which model to use: When should we use the fixed effects model and when should we use the random effects model?
 
@@ -323,9 +322,9 @@ But you might be wondering which model to use: When should we use the fixed effe
 phtest(fixed_effects, random_effects)
 ```
 
-The results show us that the p-value \< 0.05. That means that we should opt for a fixed effects model. If p \> 0.05, we should specify a random effects model. I promised not to go too deep into the math behind all this and Jan does discuss it in his lecture. But this test also relies on quite some strong assumptions...
+This is the *Hausman test*. Its null hypothesis is that the random effects model is consistent, i.e. that the unit effects are uncorrelated with the predictors. Note that the test requires both models to contain the same predictors, which is why we specified the random effects model with exactly the same variables as the fixed effects model. The result shows a p-value \< 0.05: we reject the null hypothesis and should opt for the fixed effects model. If p had been \> 0.05, the random effects model would have been the (more efficient) choice. I promised not to go too deep into the math behind all this and Jan does discuss it in his lecture. But this test also relies on quite some strong assumptions...
 
-I encourage you to dig deeper into time series. They can truly be fun but they do necessitate some math and can cause headaches... I will see you in two weeks for some TaDa fun!
+I encourage you to dig deeper into time series. They can truly be fun but they do necessitate some math and can cause headaches... And with that, we have reached the end of our journey through the lab sessions -- if you want to keep going, the appendices on R Markdown and webscraping are waiting for you!
 
 
 ## Time Series with `fixest`
@@ -417,7 +416,7 @@ model <-
   )
 ```
 
-Note how we introduce the random effects/the multi-level by specifying `(1 | region)` in our regression equation. This means that we will also capture the different income effects per region. The `lmer()` function fits a linear mixed-effects model. The `lmer()` function is used to fit linear mixed-effects models, and the `glmer()` function is used to fit generalized linear mixed-effects models.
+Note how we introduce the random effects/the multi-level structure by specifying `(1 | region)` in our regression equation. This is a *random intercept*: each region gets its own baseline level of turnout, capturing unobserved regional differences. Be careful: a random intercept does **not** allow the effect of income to differ across regions -- for that, you would need a *random slope*, specified as `(individual_income | region)`. As for the functions: `lmer()` fits linear mixed-effects models, while `glmer()` -- which we use here because our outcome is binary -- fits generalized linear mixed-effects models.
 
 Now we still have to determine whether or not our model is better than a null model. We can do this by comparing the full model with a null model. The null model is a model without hierarchical component of observation nested in the regions. We can do this by using the `anova()` function in R.
 
@@ -429,7 +428,6 @@ model_null <- glm(voted ~ individual_income + education_level + gender + number_
 lmtest::lrtest(model_null, model)
 ```
 
-\pagebreak
 
 ### References
 

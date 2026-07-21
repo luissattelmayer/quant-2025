@@ -15,8 +15,8 @@ This session will show you how to :
 3.  Interpret the results of a Diff-in-Diff analysis in R
 
 ```{r}
-#| messages: false
-#| warnings: false
+#| message: false
+#| warning: false
 
 library(haven)
 library(knitr)
@@ -89,7 +89,7 @@ Here is a brief explanation of the variables in the dataset:
 -   `ra_cst`: The advertising revenue of the newspaper (in constant (2014) euros)
 -   `ps_cst`: The price of subscriptions for the newspaper. This variable measures how much the newspaper charges for its subscriptions, reflecting its pricing strategy and revenue from readers
 -   `qtotal`: The circulation of the newspaper. This variable measures the number of copies sold, reflecting the newspaper's readership and revenue from readers
--   `after_national`: A binary indicator (0 or 1) representing the interaction between a newspaper's national status and the post-television advertising era. Specifically, it marks the period after a newspaper has started national circulation and also corresponds to times after the introduction or significant increase of television advertising. This variable is designed to capture the combined effects of a newspaper reaching a national audience and the competitive or complementary impacts of television advertising on newspaper revenues or strategies
+-   `after_national`: A binary indicator (0 or 1) for the post-treatment period: it takes on the value 1 for all years from 1967 onwards (after the introduction of television advertising) and 0 for the years before. We construct it ourselves below from the `year` variable
 -   `ra_cst_div_qtotal`: A derived variable representing the advertising revenue per unit of circulation (`ra_cst / qtotal`). This variable is calculated to assess the efficiency or effectiveness of advertising revenue in relation to the newspaper's circulation size
 
 ```{r}
@@ -98,12 +98,9 @@ newspapers <-
   select(
     year, id_news, after_national, local, national, ra_cst, ps_cst, qtotal
     ) |> 
-  mutate(ra_cst_div_qtotal = ra_cst / qtotal, 
+  mutate(ra_cst_div_qtotal = ra_cst / qtotal,
          after_national =  if_else(year >= 1967, 1, 0),
-         after_national_placebo = if_else(year >= 1966, 1, 0),
-         across(c(id_news, local, national, after_national), as.factor),
-         year = as.integer(year)) |> 
-  rename()
+         across(c(id_news, local, national, after_national), as.factor))
 
 newspapers
 ```
@@ -113,7 +110,7 @@ newspapers
 One of the first things you can do, is to plot your data points and see if something stands out. This might serve as a first indicator of anything that concerns the parallel trends assumption for example. The code below plots the development of advertising revenue for French newspapers in a given year. The panels are divided into local newspaper or national newspaper. Remember that our control group are local newspapers and the treatment group are the national ones. Essentially, we would expect that before the intervention, both groups should have parallel trajectories in their outcomes. This is the parallel trends assumption. If the parallel trends assumption holds, the difference between the treatment and control group should be constant over time. If the parallel trends assumption is violated, the DiD estimator will be biased.
 
 ```{r}
-#| warnings: false
+#| warning: false
 newspapers |>
   mutate(type = if_else(local == 1, "Local", "National")) |>
   ggplot(aes(x = year, y = ra_cst)) +
@@ -162,7 +159,7 @@ This is the code to specify exactly this. Note that in R `national * after_natio
 
 ```{r}
 newspaper_did_model <-
-  lm(log(ra_cst) ~ national * after_national + year + id_news,
+  lm(log(ra_cst) ~ national*after_national + year + id_news,
      data = newspapers)
 ```
 
@@ -170,7 +167,7 @@ You can see that this is as straightforward as what we have already done in Sess
 
 ### Interpreting the DiD model results
 
-Here, I am showing you a different way of displaying models in R/Quarto. I am making use of the fact that my quartobook is rendered to html. I am using the `modelsummary` package to display the results of the model in a nice table. Similar to the `stargazer` package, you can change almost every aspect of the table. I am using the `coef_omit` argument to exclude the fixed effects of the individual newspapers from the table. This is because we are not interested in them and it would have given us a lot of coefficients. I am also using the `coef_map` argument to rename the coefficients in the table. This package is maybe a bit more advanced but also more versatile.
+Here, I am showing you a different way of displaying models in R/Quarto. I am making use of the fact that my quartobook is rendered to html. I am using the `modelsummary` package to display the results of the model in a nice table. Similar to the `stargazer` package, you can change almost every aspect of the table. I am using the `coef_map` argument to rename the coefficients in the table. A convenient side effect of `coef_map` is that any coefficient which is not listed in it is dropped from the table -- which takes care of the many fixed effects of the individual newspapers. We are not interested in them and they would have cluttered the table with one coefficient per newspaper. This package is maybe a bit more advanced but also more versatile.
 
 ```{r}
 model_coefs <- c(
@@ -182,47 +179,59 @@ model_coefs <- c(
 
 modelsummary(newspaper_did_model,
              title = "Difference-in-Differences Model Summary",
-             # omit the fixed effects using a regular expression
-             coef_omit = "id_news\\d+",
-             stars = TRUE,
-             coef_map = model_coefs
+             # coef_map renames the listed coefficients and drops all others
+             # (here: the newspaper fixed effects)
+             coef_map = model_coefs,
+             stars = TRUE
              )
 
 ```
 
-This table reports the results from a difference-in-differences (DiD) regression model, which examines the impact of television advertising on the advertising revenues of national newspapers compared to local newspapers over time. The intercept we can disregard in this case. As a reminder, it is when all IVs are set to 0. It does not really make sense in our case, especially due to the year variable. I did drop the coefficients of all the fixed effects for the individual newspapers (which were in the factor variable of `id_news`) because we are not very interested in them and it would have given us an individual coefficient for each newspaper which would have been a lot of displayed coefficients. I used a regular expression (regex) for that. For now, you do not have to know what this is, but it is a very powerful tool to manipulate character strings. At some point, I will add this to the text-as-data tutorial or to the already existing webscraping script.
+This table reports the results from a difference-in-differences (DiD) regression model, which examines the impact of television advertising on the advertising revenues of national newspapers compared to local newspapers over time. The intercept we can disregard in this case. As a reminder, it is the expected value when all IVs are set to 0 -- which does not really make sense in our case, especially due to the year variable (there are no newspapers in the year 0). The coefficients of all the fixed effects for the individual newspapers (contained in the factor variable `id_news`) are dropped from the table by `coef_map` because we are not substantively interested in them.
 
--   **National Newspapers**: The coefficient for national newspapers is -1.039 and is highly statistically significant (p \< 0.001). This suggests that, holding other factors constant, the log of advertising revenue for national newspapers is, on average, 1.039 units lower than for local newspapers. This could imply that national newspapers, on their own, tend to have lower advertising revenue in this model or that they were already at a disadvantage before the treatment period.
+-   **National Newspapers**: The coefficient for national newspapers is -1.039 and is highly statistically significant (p \< 0.001). This suggests that, holding other factors constant, the log of advertising revenue for national newspapers is, on average, 1.039 units lower than for local newspapers -- roughly $e^{-1.039} - 1 \approx -65\%$. National newspapers thus already operated at much lower advertising revenues than local ones, independently of the treatment.
 
--   **Period After TV Ads**: The coefficient for the period after the introduction of television advertisements is very small and not statistically significant (-0.001, p \> 0.1). This indicates that the introduction of television advertising, when not considering whether a newspaper is national or local, does not have a significant overall effect on advertising revenues.
+-   **Period After TV Ads**: The coefficient for the period after the introduction of television advertisements is very small and not statistically significant (-0.001, p \> 0.1). This indicates that the post-1967 period, for the *control* group of local newspapers, is not associated with a level shift in advertising revenues once we account for the general time trend.
 
--   **Year**: The coefficient for the year variable is positive and significant (0.046, p \< 0.001), indicating that there is a general positive trend in advertising revenue over time across all newspapers in the sample.
+-   **Year**: The coefficient for the year variable is positive and significant (0.046, p \< 0.001), indicating that there is a general positive trend in advertising revenue over time across all newspapers in the sample -- about 4.7% per year.
 
--   **Interaction Effect (National \* After TV Ads)**: This is the center piece of our model since we try to estimate the causal effect through this interaction term. Fortunately for us, it is significant and negative (-0.228, p \< 0.001). In DiD analyses, this interaction term captures the differential impact of the treatment effect (here, the introduction of television ads) on the treated group (national newspapers). The negative sign suggests that after television advertising started, national newspapers experienced a significant decrease in advertising revenue compared to local newspapers. This term essentially captures the essence of the DiD strategy by showing the relative effect post-treatment for the group of interest!
+-   **Interaction Effect (National \* After TV Ads)**: This is the center piece of our model since we try to estimate the causal effect through this interaction term. It is significant and negative (-0.228, p \< 0.001). In DiD analyses, this interaction term captures the differential impact of the treatment (here, the introduction of television ads) on the treated group (national newspapers). The negative sign suggests that after television advertising started, national newspapers experienced a significant decrease in advertising revenue relative to local newspapers -- about $e^{-0.228} - 1 \approx -20\%$. This term captures the essence of the DiD strategy: the relative effect post-treatment for the group of interest!
 
-Let's test a placebo at $t-1$. The parallel trends assumption is the main assumption. We can never really test whether this assumption would be met in the absence of a treatment but we can approximate this by seeing whether this assumption holds true where we can measure it, i.e. before the treatment. That's why I have created a placebo dummy variable `after_national_placebo` earlier, which takes on the value `1` in 1966 and not in 1967. If our parallel trends assumption is correct, we should not get a significant effect for this model below:
+### A placebo test for parallel trends
+
+The parallel trends assumption is the main identifying assumption of any DiD design. We can never directly test whether the treated group *would have* evolved like the control group in the absence of the treatment. But we can probe the assumption where it is observable: in the pre-treatment period. The idea of a *placebo test* is to pretend that the treatment happened at some point **before** it actually did, using **only pre-treatment data**. If the parallel trends assumption holds, this fake treatment should produce no effect. It is important to restrict the sample to the pre-treatment years -- if we kept the real post-1967 observations in the sample, our "placebo" would simply pick up the true treatment effect again and the test would be meaningless.
+
+Below, I keep only the years up to 1966 and pretend that the treatment happened in 1963:
 
 ```{r}
+newspapers_pre <- newspapers |>
+  # only pre-treatment years!
+  filter(year <= 1966) |>
+  # fake treatment in 1963
+  mutate(placebo = as.factor(if_else(year >= 1963, 1, 0)))
+
 newspaper_did_model_placebo <-
-  lm(log(ra_cst) ~ national * after_national_placebo + year + id_news,
-     data = newspapers)
+  lm(log(ra_cst) ~ national * placebo + year + id_news,
+     data = newspapers_pre)
 ```
 
 Let's look at the regression table:
 ```{r}
-
-
 modelsummary(newspaper_did_model_placebo,
-             title = "Difference-in-Differences Model Summary",
-             # omit the fixed effects using a regular expression
-             coef_omit = "id_news\\d+",
+             title = "Placebo Difference-in-Differences (pre-treatment years only, fake treatment in 1963)",
+             coef_map = c(
+               `national1` = "National Newspapers",
+               `placebo1` = "Placebo Period (1963-1966)",
+               `national1:placebo1` = "Interaction Effect (National * Placebo)",
+               `year` = "Year"
+             ),
              stars = TRUE
              )
 ```
 
-These are odd findings as we find a similar coefficient to the one in the first model...
+The placebo interaction is much smaller than the real treatment effect (about -0.07 compared to -0.23), but it is not zero and it is statistically significant at the 5% level. What do we make of this? It suggests that national newspapers' advertising revenues may already have been trending slightly downwards relative to local newspapers *before* 1967 -- a mild violation of parallel trends that we should take seriously rather than sweep under the rug. In a real research paper, this is exactly the point where you would investigate further: plot year-by-year treatment-control differences (a so-called *event-study* specification), test additional placebo years, and discuss possible confounders. Angelucci and Cagé do this kind of careful work in the published paper.
 
-So what do we conclude now? Concerning our Difference-in-Difference causal design, the model supports the hypothesis that the introduction of television advertising had a different negative impact on national newspapers' advertising revenues compared to local newspapers! The DiD model effectively isolates this effect by comparing the changes in revenues over time between the two groups (of course assuming parallel trends before the treatment).
+So what do we conclude? The DiD estimate suggests that the introduction of television advertising reduced national newspapers' advertising revenues by roughly 20% relative to local newspapers. The placebo test reminds us, however, that this estimate rests on the parallel trends assumption, and that there are hints of a small pre-existing differential trend. This is a very typical situation in applied causal inference: the design is credible, but the assumptions deserve scrutiny -- and honest reporting.
 
 ## References
 

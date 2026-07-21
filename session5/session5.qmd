@@ -30,7 +30,7 @@ In this script, I will show you how to construct a multinomial logistic regressi
 
 ## The Logic of multinomial (logistic) Regressions
 
-I have chosen four countries out of which you will be able to choose one later one when I ask you to work on some exercises. For now, I will mainly work on Germany. One of the classic applications of multinomial models in political science is the question of voting behavior, more precisely vote choice. Last week, we have seen models of a logistic regression (logit). It is used in cases when our dependent variable (DV) is binary (0 or 1; true or false; yes or no) which means that we are not allowed to use OLS. The idea of logit can be extended to *unordered categorical or nominal variables* with more than **two** categories, e.g.: Vote choice, Religion, Brands...
+I have chosen four countries out of which you will be able to choose one later on when I ask you to work on some exercises. For now, I will mainly work on Germany. One of the classic applications of multinomial models in political science is the question of voting behavior, more precisely vote choice. Last week, we have seen models of a logistic regression (logit). It is used in cases when our dependent variable (DV) is binary (0 or 1; true or false; yes or no) which means that we are not allowed to use OLS. The idea of logit can be extended to *unordered categorical or nominal variables* with more than **two** categories, e.g.: Vote choice, Religion, Brands...
 
 Instead of one equation modelling the log-odds of $P(X=1)$, we do the same thing but for the amount of categories that we have. In fact, this means that a multinomial model runs several single logistic regressions on something we call a *baseline.* R will choose this baseline to which the categorical values of our DV will then relate. But we can also change it (this is called releveling). This allows us to make very interesting inferences with categorical (or ordinal) variables. If this sounds confusing, you should trust me when I tell you that this will become more straightforward in a second!
 
@@ -40,13 +40,13 @@ But enough small talk, let's first do some data wrangling which you all probably
 
 ## Data Management for Multinomial Regression
 
-The data which we will use for this session is the 9th round of the ESS published in 2018. The goal of this session is to understand predictors that tell us more about why people vote for Populist Radical-Right Parties, henceforth called *PRRP* (Mudde 2007). For this I have two main hypotheses in mind, as well as some predictors which I know are important based on the literature. Finally we also need some control variables which we need to control for in almost any regression analysis using survey data.
+The data which we will use for this session is the 9th round of the ESS, fielded in 2018/2019. The goal of this session is to understand predictors that tell us more about why people vote for Populist Radical-Right Parties, henceforth called *PRRP* (Mudde 2007). For this I have two main hypotheses in mind, as well as some predictors which I know are important based on the literature. Finally we also need some control variables which we need to control for in almost any regression analysis using survey data.
 
 My two hypotheses (**H1**) and **H2**) are as follows:
 
 > **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
 >
-> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
+> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs rather than for other parties.
 
 Now you might notice two things. First, my hypotheses are relatively self-explanatory and you are absolutely right. They are more than that, they are perhaps even self-evident. But to this, I would just reply that this is supposed to be an easy exercise which is supposed to expose you to a multinomial regression and the logic of it. Second, you might see that my hypotheses are relatively broadly formulated. This is because I would like you, later in class, to choose one of the countries of the 9th wave of the ESS and build a model yourselves. By giving you broad hypotheses, you can do this ;)
 
@@ -77,26 +77,23 @@ Again, every transformation and mutation of variables which you see below is don
 You have seen a similar chunk of code in the last script. See how, once you have a code that works for one dataset, you can use it again?
 
 ```{r}
-library(dplyr)
-
 ess_clean <- ess |>
   mutate(across(
-    where(is.numeric) & !starts_with("yrbrn"),  # Exclude 'age' while keeping numeric columns
+    where(is.numeric),  # Exclude 'age' while keeping numeric columns
     ~ case_when(
       . %in% c(66, 77, 88, 99, 7777, 8888, 9999) ~ NA_integer_,
       TRUE ~ .
     )
   ),
-  prtvtdfr = replace(prtvtdfr, prtvtdfr %in% c(1, 2, 10, 12:99), NA),
-  prtvede1 = replace(prtvede1, !prtvede1 %in% c(1:6), NA),
-  prtvtddk = replace(prtvtddk, !prtvtddk %in% c(1:10), NA),
-  prtvtdpl = replace(prtvtdpl, !prtvtdpl %in% c(1:8), NA),
-  blgetmg = replace(blgetmg, !blgetmg %in% c(1:2), NA),
-  gndr = recode(gndr, `1` = 0, `2` = 1))
+  gndr = recode(gndr, `1` = 0, `2` = 1),
+  blgetmg = case_when(
+    blgetmg == 2 ~ 0, 
+    blgetmg == 1 ~ 1
+  ))
 
 ```
 
-In fact, you could already build the model now and start the multinomial regression. However, I add an additional data management step by placing the numeric values of the election variable in a new variable called `vote_de`, where I convert the numeric values to character values and at the same time give them the names of the parties. This will automatically transform NAs in all the rows in which the country is not that in which the person has voted.
+In fact, you could already build the model now and start the multinomial regression. However, I add an additional data management step by placing the numeric values of the election variable in a new variable called `vote_de`, where I convert the numeric values to character values and at the same time give them the names of the parties. Rows for respondents from other countries (who have no value on the German vote variable) automatically become `NA` in this new variable.
 
 But more importantly, once I run the regression, it will display the parties' names instead of the numbers. This means that I won't have to go back to the code book every time to check what the 1s or 2s correspond to.
 
@@ -155,21 +152,27 @@ model_dk <- multinom(vote_dk ~ imueclt  + stflife + trstplt + blgetmg + gndr +
 
 ### Re-leveling your DV
 
-In my case, the German PRRP is called *Alternative für Deutschland* meaning it starts with an "A". R tends to take the alphabetical order as a criterion for the baseline meaning that the baseline for your multinomial model is chosen based on the party which comes first in alphabetical order. Depending on what you want to show, you might want to change the baseline which we can do with the `fct_relevel()` function. Let's say we are not interested in vote choice regarding the PRRP but conservative parties and thus want to put the German Christian conservative party, the CDU/CSU, as a baseline. Here is how we could do this in R:
+In my case, the German PRRP is called *Alternative für Deutschland* meaning it starts with an "A". R tends to take the alphabetical order as a criterion for the baseline meaning that the baseline for your multinomial model is chosen based on the party which comes first in alphabetical order. Depending on what you want to show, you might want to change the baseline which we can do with the `fct_relevel()` function. If, for instance, we were not interested in vote choice regarding the PRRP but in conservative parties, we could put the German Christian conservative party, the CDU/CSU, as the baseline instead. In the chunk below I show you the mechanics: I set the baselines explicitly (for Germany the AFD, which is what the alphabetical default already gives us; for Denmark the Dansk Folkeparti, the Danish PRRP):
 
 ```{r}
-# don't run this code chunk
-#| eval: false
-# you need to specify your DV as a factor for this; further, the ref must 
+# you need to specify your DV as a factor for this; further, the ref must
 # contain the exact character label of the party
 
-ess_clean$vote_de |> levels()
+# vote_de is still a character vector; converted to a factor, its levels
+# default to alphabetical order (AFD first):
+ess_clean$vote_de |> as.factor() |> levels()
+ess_clean$vote_dk |> as.factor() |> levels()
 
-ess_clean <- ess_clean |> 
-  mutate(vote_de = fct_relevel(as.factor(vote_de), "CDU/CSU"))
+# fct_relevel() moves the chosen category to the first position, which makes
+# it the baseline. If we wanted the CDU/CSU as the baseline, we would write
+# fct_relevel(as.factor(vote_de), "CDU/CSU"). Below, I explicitly set the
+# AFD (Germany) and the Dansk Folkeparti (Denmark) as baselines; for Germany
+# this matches the alphabetical default, so our models above are unaffected.
+ess_clean <- ess_clean |>
+  mutate(vote_de = fct_relevel(as.factor(vote_de), "AFD"),
+         vote_dk = fct_relevel(as.factor(vote_dk), "Dansk Folkeparti"))
 
-ess_clean$vote_de |> levels()
-
+ess_clean$vote_dk |> levels()
 ```
 
 ## Interpreting a Multinomial Model
@@ -191,13 +194,14 @@ modelsummary::modelsummary(
     "trstplt" = "Trust in Politicians",
     "blgetmg" = "Ethnic Minority",
     "gndr" = "Gender",
-    "yrbrn" = "Age",
+    "yrbrn" = "Year of Birth",
     "eduyrs" = "Education",
     "hinctnta" = "Income"
   ),
   title = "Multinomial Regression Results Germany",
   notes = "Vote Choice is the dependent variable.",
   output = "html",
+  fmt = 3,
   shape = model + term ~ response,
   gof_map = tibble::tribble(
     ~raw, ~clean, ~fmt,
@@ -228,10 +232,11 @@ modelsummary::modelsummary(
     "trstplt" = "Trust in Politicians",
     "blgetmg" = "Ethnic Minority",
     "gndr" = "Gender",
-    "yrbrn" = "Age",
+    "yrbrn" = "Year of Birth",
     "eduyrs" = "Education",
     "hinctnta" = "Income"
   ),
+  fmt = 3,
   shape = model + term ~ response
 )
 
@@ -245,7 +250,7 @@ The format of the regression table on our Danish model is not ideal since the na
 
 We can see that many many things are going on in this regression table. Let us try to analyze our results step by step.
 
-First of all, we can see that we have many variables that are statistically significant (lots of stars yay!). This is always a good sign. Note also that the baseline was the party *AFD*. You can see this based on the fact that the category AFD which our DV can take on is not given in our table. This means that whenever we see the results where the DV is one of the parties, R has calculated the coefficients based on the logic that the respondent would have voter for *either* the party in the dependent variable *or* the party of the baseline, which in our case is that of the AFD. In more mathematical terms these are several single logistic regressions always with regards to the baseline AFD which are then aggregated to a multinomial regression. And to be slightly more mathematical, this means our DV is technically: $1 = DV$ and then $0 = AFD$.
+First of all, we can see that we have many variables that are statistically significant (lots of stars). Remember that stars only tell us about statistical significance, not about whether our model is good or our theory is right. Note also that the baseline was the party *AFD*. You can see this based on the fact that the category AFD which our DV can take on is not given in our table. This means that whenever we see the results where the DV is one of the parties, R has calculated the coefficients based on the logic that the respondent would have voter for *either* the party in the dependent variable *or* the party of the baseline, which in our case is that of the AFD. In more mathematical terms these are several single logistic regressions always with regards to the baseline AFD which are then aggregated to a multinomial regression. And to be slightly more mathematical, this means our DV is technically: $1 = DV$ and then $0 = AFD$.
 
 Therefore, we can interpret the results exactly like we would for a logistic regression. Last week it was about the likelihood of voting abstention, this week it is the likelihood of voting for the CDU/CSU instead of the AFD, or voting for the SPD instead of the AFD, or voting for Die Linke instead of the AFD, and so on. You get the idea hopefully.
 
@@ -257,9 +262,9 @@ As a reminder, these were my initial (frankly also bad) hypotheses:
 
 > **H1**: Thinking that immigrants enrich a country's culture decreases the likelihood of voting for PRRPs.
 >
-> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs than voting for other parties.
+> **H2**: Having less trust in politicians increases the likelihood of voting for PRRPs rather than for other parties.
 
-I am now interested to see the effect of positivity toward migration and trust in politicians *on* the vote choice for each party *instead* of the AFD. What we can see is that a one-unit increase in positive attitudes toward migration (thinking that immigrants culturally enrich the respondents' country) raises the likelihood for voting for all other parties *instead* of voting for the AFD. In the case of the first column, in which the vote was either for the CDU/CSU or the AFD, a one unit increase in stances on immigration results in a higher likelihood of voting of voting for the CDU/CSU than the AFD.
+I am now interested to see the effect of positivity toward migration and trust in politicians *on* the vote choice for each party *instead* of the AFD. What we can see is that a one-unit increase in positive attitudes toward migration (thinking that immigrants culturally enrich the respondents' country) raises the likelihood for voting for all other parties *instead* of voting for the AFD. In the case of the first column, in which the vote was either for the CDU/CSU or the AFD, a one unit increase in stances on immigration results in a higher likelihood of voting for the CDU/CSU than the AFD.
 
 If we now turn to trust in politicians and this variable's effect on vote choice for the different German parties, we can see that overall there is a statistically significant a positive association with having more trust in politicians and also voting for other parties than the AFD. In return, this also means that low trust in politicians raises the likelihood of voting for the AFD.
 
@@ -271,7 +276,7 @@ You all hopefully still remember the idea of *predicted probabilities* which we 
 
 The text below is the outdated version of how I calculate predicted probabilities for multinomial models. I still leave it in here because it is still working but I recommend working with the `marginaleffects`.
 
-The package is called `MNLpred` and allows us to specify the variable of interest. This packages makes draws from our posterior distribution (hello Bayesian statistics) and simulates our coefficients n-times (we tell it how many times to run the simulation) and then takes the mean value of all of our simulations. \footnote{Since R will simulate many many things at the same time, your knit might take more time than usually. This is perfectly normal.} This way, we end up more or less with the same predicted probabilities that we have seen last week. These are much more easily interpreted than relative risk ratios (the odds-ratios of multinomial regressions) and can be plotted.
+The package is called `MNLpred` and allows us to specify the variable of interest. This package simulates our coefficients n-times (we tell it how many times to run the simulation) by drawing from a multivariate normal distribution centered on our estimated coefficients -- a simulation approach in the spirit of Bayesian statistics (@king_making_2000) -- and then takes the mean value of all of our simulations. \footnote{Since R will simulate many many things at the same time, your knit might take more time than usually. This is perfectly normal.} This way, we end up more or less with the same predicted probabilities that we have seen last week. These are much more easily interpreted than relative risk ratios (the odds-ratios of multinomial regressions) and can be plotted.
 
 ```{r}
 library(MNLpred)
@@ -340,9 +345,9 @@ ggplot(data = pred2$plotdata, aes(
        x = "Trust in Politicians") 
 ```
 
-Here we can see very well by how many percent the likelihood increases or decreases for each party given that our independent variable, our predictor, of trust in politicians increases (increasing values mean more trust in politicians).
+Here we can see very well how the predicted probability of voting for each party increases or decreases as our predictor, trust in politicians, increases (increasing values mean more trust in politicians).
 
-We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want to have a color selector to get the HEX color codes, you can click on this link: (it will say *Google Farbwähler*, which is not a scam but German...). As by recently, R will also display the color you have selected.
+We can also visualize our predicted probabilities in one single plot. I made the effort of coordinating the colors so that they would be displayed in the colors of the parties. If you want a color selector to get the HEX color codes, you can use [Google's color picker](https://www.google.com/search?q=color+picker). Recent versions of RStudio will also display a small preview of the color you have selected directly in the editor.
 
 ```{r}
 ggplot(data = pred2$plotdata, aes(
@@ -473,7 +478,7 @@ multinom_pred_de_gender <- plot_predictions(
 multinom_pred_de_gender |> 
   ggplot(aes(gndr, estimate, group = group, color = group)) +
   geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
-  facet_wrap(~group) +
+  facet_wrap(~group, scales = "free_y") +
   scale_color_manual(
     values = c(
       "#03c2fc",  # AFD
@@ -521,7 +526,9 @@ Then there are issues of scary words like *multicollinearity* or *heteroskedasti
 
 For now, we will only look at the potential issue of multicollinearity. It occurs when your independent variables are correlated among each other. This means that they vary very similarly in their values and measure either similar things or measure things the same way. The higher the multicollinearity within your model, the less reliable are your statistical inferences.
 
-We can detect the amount and measure of (multi)collinearity by calculating the *Variance Inflation Factor* (VIF). It measures the amount of correlation between our predictors. The VIF should be below 10. If it is below 0.2, this is a potential problem. Anything below 0.1 should have us really worried. To do this in R, we use the `vif()` function of the `car` package. However, it does not work on the object of a multinomial model. Thus, we cheat our way around it and build a GLM model (`glm()`) in which we set our DV as factors and pretend that they are binomially distributed. This way, R sort of manually calculates the individual logistic regressions according to a baseline and we can calculate the VIF for the IVs individually.
+We can detect the amount and measure of (multi)collinearity by calculating the *Variance Inflation Factor* (VIF). It measures how much the variance of a coefficient is inflated by the correlation between our predictors. The smallest possible value is 1, which means no collinearity at all. As a common rule of thumb, VIF values above 5 deserve a closer look and values above 10 indicate a serious multicollinearity problem. (You will sometimes see thresholds of 0.2 or 0.1 mentioned in this context -- those refer to the *tolerance*, which is simply 1/VIF, so low tolerance corresponds to high VIF.)
+
+To do this in R, we use the `vif()` function of the `car` package. However, it does not work on the object of a multinomial model. Thus, we cheat our way around it and fit an auxiliary `glm()` in which our vote variable is entered as a factor with a binomial family. Be aware of what this auxiliary model actually is: with a multi-category factor as the outcome, `glm()` fits a *single* binary logistic regression of the first factor level (the AFD) against all other parties combined -- it is **not** our multinomial model. That is fine for our purpose here, because the VIF is a property of the *predictors* (it is computed from the correlations among the IVs), not of the outcome. But you should not interpret this auxiliary model's coefficients.
 
 ```{r}
 model_vif <-
@@ -536,7 +543,7 @@ car::vif(model_vif)
 
 ```
 
-Based on the results, we can see that our variance is not inflated since all values are below 10. That is great news! A VIF of 1 means that there is no correlation within our predictors, a VIF between 1 and 5 (which is quite normal) indicates slight correlation, and a VIF between 5 and 10 shows a strong correlation.
+Based on the results, we can see that multicollinearity is no concern in our model: all VIF values are between 1.0 and 1.4, i.e. very close to the minimum of 1. As a reading aid: a VIF of 1 means that a predictor is not correlated with the other predictors at all, values between 1 and 5 indicate modest correlation (which is quite normal), values between 5 and 10 indicate strong correlation, and values above 10 signal a serious problem.
 
 If, however, you should encounter issues of multicollinearity, you should test the VIFs for different versions of your model by starting to drop the IV with the highest VIF and see how that affects your VIFs overall. Or you check the variables which have high values, see if theoretically speaking they measure similar things, and combine them into a single measure.
 

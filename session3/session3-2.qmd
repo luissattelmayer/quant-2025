@@ -1,2 +1,0 @@
-# Instrumental Variables
-This is work in progress and something will appear very soon!

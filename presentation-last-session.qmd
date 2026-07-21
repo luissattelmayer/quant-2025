@@ -48,6 +48,12 @@ format:
 - If I was not good at this three years ago, you all still have a chance; I mean it!
 :::
 
+## Don't forget theory
+- It is the mantra of this class
+  - without good theory, interesting data is just an informed story
+
+- Good research relies on theorization, and a degree of abstraction (qual. or quant.)
+  - your data and methods serve the purpose of proving that story and argument, but they should be central
 
 
 ## Some thoughts on a possible roadmap  {.smaller}
@@ -57,12 +63,9 @@ format:
   - For some things on causal inference (in R): [Causal Inference Mixtape](https://mixtape.scunning.com/)
   - Ever heard of Bayes? [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) 
   - For some more advanced text-as-data stuff: [Text Mining with R](https://www.tidytextmining.com/)
-  - One of the best R ressources out there: [Telling Stories with Data](https://tellingstorieswithdata.com/)
+  - One of the best R resources out there: [Telling Stories with Data](https://tellingstorieswithdata.com/)
+  - Some shameless self promotion: [Introduction to CSS](https://github.com/luissattelmayer/intro-css)
   - Some text-as-data stuff but the theory behind it: @grimmer_text_2022
-:::
-
-:::{.fragment .nonincremental}
-- Some shameless self promotion: Malo's and my class on Computational Social Sciences in January
 :::
 
 :::{.fragment .nonincremental}
@@ -73,7 +76,7 @@ format:
 
 ## Final Homework  {.smaller}
 - If you have questions on stats, text-as-data or any other coding related questions, contact me! I love talking about it and what I have shown you is only a marginal part of what you can do 
-  - and once the semester is over I am much more flexible with my time
+  - and once the semester and conferences are over, I am much more flexible with my time
   
 - The last homework for this semester: create a **meme** about this class, something you have learned or whatever you want; it can be about anything, get creative!
   - yes, it is mandatory, even it is a shitty meme
