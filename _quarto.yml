@@ -6,7 +6,7 @@ book:
   title: "Advanced RStudio Labsessions"
   subtitle: "Quantitative Methods II"
   author: "Luis Sattelmayer"
-  date: last-modified
+  date: 2025-04-23
   repo-url: https://github.com/luissattelmayer/quant-2025
   sidebar:
     collapse-level: 6
